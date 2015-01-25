@@ -1,0 +1,79 @@
+# Standard stuff
+Thumbs.db
+*.obj
+*.pdb
+*.user
+*.aps
+*.pch
+*.vspscc
+*_i.c
+*_p.c
+*.ncb
+*.suo
+*.sln.docstates
+*.tlb
+*.tlh
+*.bak
+*.cache
+*.ilk
+*.log
+*.sbr
+obj/
+[Rr]elease*/
+_ReSharper*/
+[Tt]est[Rr]esult*
+*.vssscc
+$tf*/
+[Bb]in
+[Dd]ebug*/
+
+# Libraries
+*.lib
+*.a
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+
+# Compiled Static libraries
+*.lai
+*.la
+
+# Compiled Python
+*.pyc
+
+# CMake/build directory
+[Bb]uild/
+build-win/
+build*/
+# CMake cache
+CMakeCache.txt
+CMakeFiles
+Makefile
+cmake_install.cmake
+install_manifest.txt
+
+# NetBeans project directory
+nbproject/
+
+# Vim swap files
+*.swp
+
+# Temporary/backup files
+*~
