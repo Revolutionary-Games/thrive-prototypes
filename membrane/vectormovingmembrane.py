@@ -105,7 +105,7 @@ def within(a,b,lim=5):
 class controlpoint:
     def __init__(self):
         self.pos = Vector(random.randint(300,700),random.randint(300,700),random.randint(-200,200))
-        self.mass = random.randint(5,10)
+        self.mass = random.randint(5,15)
         self.spos = tospherical(self.pos)
         self.colour = (0,0,255)
         self.norm = norm(self.pos)
@@ -120,8 +120,10 @@ class controlpoint:
         threshold = 150
         movement = Vector(0,0,0)
         for i in range(len(controlpoints)):
+            distancenucleus = distance(self.pos, controlpoints[0].pos)
+            gelfactor = min(1,1 - (math.exp(-distancenucleus)))
             towards = direction(self.pos, controlpoints[i].pos)
-            movement += (towards*(1 - (1 / norm(towards / threshold))**2))*controlpoints[i].mass
+            movement += (towards*(1 - (1 / norm(towards / threshold))**2))*controlpoints[i].mass*gelfactor
         self.pos += movement*0.001
         self.norm = norm(self.pos)
 
