@@ -47,22 +47,26 @@ class AstroBody:
         self.r = r # the orbital radius, not radius of the body itself
         self.m = m
         self.phase = phase
-        self.hill = 0 if parent is None else hill(r, m, parent.m)
-        if not isLPoint:
-            '''
-            add L1, L2 to self -- complicated, these must stay collinear
-            if they're children of self, then positioning them at Hill radius
-            will make that work, but we must still ensure alignment -- maybe 
-            the better option is to force their positioning somehow
-            '''
-            # add L3, L4, L5 to parent
-            # Todo -- assign some effective mass to the lagrange points
-            AstroBody(r, 0, pi + phase, parent, True) # L3
-            AstroBody(r, 0, pi * 1.0 / 3 + phase, parent, True) # L4 (or is it L5?)
-            AstroBody(r, 0, pi * 5.0 / 3 + phase, parent, True) # L5 (or is it L4?)
-    pass
+        self.hill = 0
+        self.children = {}
+        if parent is not None:
+            self.hill = hill(r, m, parent.m)
+            self.parent.children[r] = self
+            if not isLPoint:
+                '''
+                add L1, L2 to self -- complicated, these must stay collinear
+                if they're children of self, then positioning them at Hill radius
+                will make that work, but we must still ensure alignment -- maybe 
+                the better option is to force their positioning somehow
+                '''
+                # add L3, L4, L5 to parent
+                # Todo -- assign some effective mass to the lagrange points
+                AstroBody(r, 0, pi + phase, parent, True) # L3
+                AstroBody(r, 0, pi * 1.0 / 3 + phase, parent, True) # L4 (or is it L5?)
+                AstroBody(r, 0, pi * 5.0 / 3 + phase, parent, True) # L5 (or is it L4?)
 
-class Projectile: # we might need a better name here
+
+class Projectile:
     def __init__(self):
         pass
     pass
