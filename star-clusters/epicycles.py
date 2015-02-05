@@ -26,12 +26,45 @@ can be characterized entirely by orbital radius -- the phase angle is important 
 timing-sensitive paths, but for path-planning over the ITN this is moot, as paths are 
 generally slow but cheap.
 
+The data model should be rather simple: Every body controls the things within its 
+Hill Sphere, and only those, but not within sub-spheres. No two Hill Spheres will 
+ever intersect. So, we can model the whole shebang as a tree -- with every orbit being 
+tied to a particular node, and every transfer being a walk of the tree.
+
 '''
 
+import math
+
+def hill(dist, m_c, m_p):
+    '''
+    Returns the full Hill radius of the child body.
+    '''
+    return dist * (m_c / (3.0 * m_p)) ** (1/3.0)
+
 class AstroBody:
+    def __init__(self, r, m, phase = 0, parent = None, isLPoint = False):
+        self.parent = parent
+        self.r = r # the orbital radius, not radius of the body itself
+        self.m = m
+        self.phase = phase
+        self.hill = 0 if parent is None else hill(r, m, parent.m)
+        if not isLPoint:
+            '''
+            add L1, L2 to self -- complicated, these must stay collinear
+            if they're children of self, then positioning them at Hill radius
+            will make that work, but we must still ensure alignment -- maybe 
+            the better option is to force their positioning somehow
+            '''
+            # add L3, L4, L5 to parent
+            # Todo -- assign some effective mass to the lagrange points
+            AstroBody(r, 0, pi + phase, parent, True) # L3
+            AstroBody(r, 0, pi * 1.0 / 3 + phase, parent, True) # L4 (or is it L5?)
+            AstroBody(r, 0, pi * 5.0 / 3 + phase, parent, True) # L5 (or is it L4?)
     pass
 
-class Probe: # we really need a better name here
+class Projectile: # we might need a better name here
+    def __init__(self):
+        pass
     pass
 
 
