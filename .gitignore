@@ -58,6 +58,10 @@ $tf*/
 # Compiled Python
 *.pyc
 
+# Compiled Processing
+application.*/
+web-export/
+
 # CMake/build directory
 [Bb]uild/
 build-win/
