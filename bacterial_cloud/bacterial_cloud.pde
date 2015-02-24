@@ -4,8 +4,8 @@ int time = 0;
 
 // Grid setup
 int xs = 50;
-int ys = 50;
-int w = 8;
+int ys = 30;
+int w = 30;
 
 Vehicle[] agents;
 boolean debug = true;
@@ -19,10 +19,7 @@ void setup(){
   
   size(xs*w,ys*w);
   
-  agents = new Vehicle[3];
-  for(int i = 0; i < 3; i++)
-    agents[i] = new Vehicle(w * xs/2, (w * ys) * (i + 1) / 4);
-          
+  
   mask = new Arr2d(new float[][]{{0.707,1,0.707},{1,0,1},{0.707,1,0.707}});
   mask.Mult(0.01);
   mask.data[1][1] = -mask.Sum();
@@ -35,6 +32,16 @@ void setup(){
   bacteria = new GridLayers();
   bacteria.Add(new Grid(xs,ys,w), color(0,1,1));
   
+  agents = new Vehicle[3];
+  agents[0] = new Vehicle(w * xs/2, (w * ys) * 1 / 4, compounds.get(2));
+  agents[1] = new Vehicle(w * xs/2, (w * ys) * 2 / 4, compounds.get(2));
+  agents[2] = new Vehicle(w * xs/2, (w * ys) * 3 / 4, compounds.get(0));
+//  for(int i = 0; i < 3; i++)
+//  if (i == 2)
+//    agents[i] = new Vehicle(w * xs/2, (w * ys) * (i + 1) / 4, compounds.get(2));
+//  else
+//    agents[i] = new Vehicle(w * xs/2, (w * ys) * (i + 1) / 4, compounds.get(0));
+          
 //  PrintArr2d(mask.data);
 //  Arr2d co = new Arr2d(mask.data);
 //  PrintArr2d(co.data);
@@ -73,13 +80,14 @@ void draw(){
     // Move and display agents
     for(int i = 0; i < 3; i++)
       {
-        agents[i].wander();
         agents[i].run();
         
         // Agents leak compounds
-        compounds.get(i).AddAt(agents[i].location, 1);
+        compounds.get(i).AddAt(agents[i].location, .2);
         if( i < 2)
         compounds.get(2).AddAt(agents[i].location, -1);
+        else
+        compounds.get(0).AddAt(agents[i].location, -1);
       }
       
     // Test gradient at current mouse position

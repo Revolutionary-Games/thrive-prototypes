@@ -10,21 +10,44 @@ class Vehicle {
   PVector velocity;
   PVector acceleration;
   float r;
-  float wandertheta;
   float maxforce;    // Maximum steering force
   float maxspeed;    // Maximum speed
 
-  Vehicle(float x, float y) {
+  Wander_Steering ws;
+  Gradient_Steering gs;
+  
+  Vehicle(float x, float y, Grid g) {
     acceleration = new PVector(0,0);
     velocity = new PVector(0,0);
     location = new PVector(x,y);
     r = 6;
-    wandertheta = 0;
     maxspeed = 2;
     maxforce = 0.05;
+	
+	ws = new Wander_Steering(0);
+	gs = new Gradient_Steering(g);
   }
 
   void run() {
+    
+    PVector g = gs.CalcTarget(location, velocity, acceleration);
+    PVector w = ws.CalcTarget(location, velocity, acceleration);
+    
+//    g.mult(5);
+    g.normalize();
+    w.normalize();
+    g.mult(0.5);
+    
+    PVector targ = PVector.add(g,w); //gs.CalcTarget(location, velocity, acceleration), ws.CalcTarget(location, velocity, acceleration));
+    targ.add(location);
+
+    print("l : ", location, "| g : ", g, " | w : ", w, "| t : ", targ, "\n");
+
+    seek(targ);
+    
+    ws.DisplayDebug();
+    gs.DisplayDebug();
+
     update();
     borders();
     display();
@@ -40,28 +63,6 @@ class Vehicle {
     // Reset accelertion to 0 each cycle
     acceleration.mult(0);
   }
-
-  void wander() {
-    float wanderR = 25;         // Radius for our "wander circle"
-    float wanderD = 80;         // Distance for our "wander circle"
-    float change = 0.3;
-    wandertheta += random(-change,change);     // Randomly change wander theta
-
-    // Now we have to calculate the new location to steer towards on the wander circle
-    PVector circleloc = velocity.get();    // Start with velocity
-    circleloc.normalize();            // Normalize to get heading
-    circleloc.mult(wanderD);          // Multiply by distance
-    circleloc.add(location);               // Make it relative to boid's location
-    
-    float h = velocity.heading2D();        // We need to know the heading to offset wandertheta
-
-    PVector circleOffSet = new PVector(wanderR*cos(wandertheta+h),wanderR*sin(wandertheta+h));
-    PVector target = PVector.add(circleloc,circleOffSet);
-    seek(target);
-
-    // Render wandering circle, etc. 
-//    if (debug) drawWanderStuff(location,circleloc,target,wanderR);
-  }  
 
   void applyForce(PVector force) {
     // We could add mass here if we want A = F / M
@@ -108,16 +109,3 @@ class Vehicle {
     if (location.y > height+r) location.y = -r;
   }
 }
-
-
-// A method just to draw the circle associated with wandering
-void drawWanderStuff(PVector location, PVector circle, PVector target, float rad) {
-  stroke(0); 
-  noFill();
-  ellipseMode(CENTER);
-  ellipse(circle.x,circle.y,rad*2,rad*2);
-  ellipse(target.x,target.y,4,4);
-  line(location.x,location.y,circle.x,circle.y);
-  line(circle.x,circle.y,target.x,target.y);
-}
-

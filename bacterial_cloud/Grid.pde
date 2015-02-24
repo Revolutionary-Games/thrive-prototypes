@@ -64,12 +64,13 @@ class Grid {
 //    PrintArr2d(growth.data);
     
     Arr2d mg = new Arr2d(growth.data);
-    mg.Mult(0.1);
+    mg.Mult(0.5);
     data.Add(mg);
 //    data.Sub(.01);
     data.Mult(0.99);
     data.Clamp(0, 10);
     
+    growth.Mult(0.2);
     in2.data.Sub(growth);
     in1.data.Sub(growth);
     out.data.Add(growth);
