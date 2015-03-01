@@ -49,13 +49,12 @@ class point:
 
 	#get the vector field from the potential field, turns out it's super simple
 	def generate_vector_field(self):
-		self.dx = get_derivative(self, points[self.i + 1][self.j])
-		self.dy = get_derivative(self, points[self.i][self.j + 1])
+		self.dy = -get_derivative(self, points[self.i + 1][self.j])
+		self.dx = get_derivative(self, points[self.i][self.j + 1])
 
 	#generate noise for the potential field, this is where I don't really know what I'm doing
 	def generate_psi(self):
-		noise = (math.sin(self.i/3 + time)*math.cos(self.j/3 + time))
-		#noise = math.sqrt((50 + time - i)**2 + (50 + time - j)**2)
+		noise = math.sin(math.sqrt((20 + time - i)**2 + (20 + time - j)**2))
 		self.psi = noise
 
 
@@ -96,7 +95,7 @@ while running:
 			points[i][j].display()
 
 	time += 0.5
-	if time >= 3*math.pi:
+	if time >= 6*math.pi:
 		time = 0
 
 	pygame.display.flip()
