@@ -34,6 +34,7 @@ tied to a particular node, and every transfer being a walk of the tree.
 '''
 
 import math
+from sortedcontainers import SortedSet
 
 def hill(dist, m_c, m_p):
     '''
@@ -49,8 +50,23 @@ class AstroBody:
         self.phase = phase
         self.hill = 0
         self.children = {}
+        '''
+        Records orbital lanes available for AstroBodies.
+        Any radius within some range (x_{2i}, x_{2i + 1}) is available.
+        Any radius within some range (x+{2i - 1}, x_{2i}) is not.
+        '''
+        self.available = SortedSet([0])
+
         if parent is not None:
             self.hill = hill(r, m, parent.m)
+            
+            rin = self.parent.available.bisect(r - self.hill)
+            rout = self.parent.available.bisect_left(r + self.hill)
+            if rin != rout or not rin % 2:
+                raise Exception("Can't place within path of sibling hill sphere")
+
+            self.parent.available ^= SortedSet([r - self.hill, r + self.hill])
+
             self.parent.children[r] = self
             if not isLPoint:
                 '''
@@ -64,6 +80,13 @@ class AstroBody:
                 AstroBody(r, 0, pi + phase, parent, True) # L3
                 AstroBody(r, 0, pi * 1.0 / 3 + phase, parent, True) # L4 (or is it L5?)
                 AstroBody(r, 0, pi * 5.0 / 3 + phase, parent, True) # L5 (or is it L4?)
+    def addChild(self, r, m, phase = 0):
+        '''
+        Adds a child to this body -- tries to pack the child in as close 
+        to target orbital radius as possible (since it must avoid overlapping Hills)
+        '''
+        massrat = (m / (3.0 * self.m)) ** (1/3.0)
+
 
 
 class Projectile:
