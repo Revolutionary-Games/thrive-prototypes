@@ -11,7 +11,7 @@ from pygame.locals import *
 #setup
 
 background_colour = (255,255,255)
-(width, height) = (1600, 800)
+(width, height) = (900, 700)
 
 screen = pygame.display.set_mode((width, height))#,pygame.FULLSCREEN)
 screen.fill(background_colour)
@@ -59,7 +59,7 @@ def findradius(body):
 
 #usual euclidean distance
 def distance(x,y,x1,y1):
-	return math.sqrt((x-x1)**2 + (y - y1)**2)
+	return math.hypot(x-x1, y - y1)
 
 # change the scale if the spaceship is off the screen
 def checkdisplay():

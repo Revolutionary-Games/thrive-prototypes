@@ -91,7 +91,7 @@ class Face:
     def __init__(self, orientation, dim = 30):
         assert orientation in 'ABCDEF'
         self.orientation = orientation
-        self.dim = dim # == max_x == max_y == (-min_x) == (-min_y)
+        self.dim = dim/2 # == max_x == max_y == (-min_x) == (-min_y)
         #self.data = numpy.zeros((dim*2, dim*2)) # indexed in [x][y] order
 
     def length_metric(self, length, position):
@@ -121,12 +121,13 @@ class Face:
 
 class Sphube:
     def __init__(self, r = 45):
+        face_side = r / sqrt3
         self.faces = {
-            "A": Face("A", r/sqrt2),
-            "B": Face("B", r/sqrt2),
-            "C": Face("C", r/sqrt2),
-            "D": Face("D", r/sqrt2),
-            "E": Face("E", r/sqrt2),
-            "F": Face("F", r/sqrt2),
+            "A": Face("A", face_side),
+            "B": Face("B", face_side),
+            "C": Face("C", face_side),
+            "D": Face("D", face_side),
+            "E": Face("E", face_side),
+            "F": Face("F", face_side),
         }
-
+        self.r = r

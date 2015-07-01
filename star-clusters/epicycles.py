@@ -34,7 +34,7 @@ tied to a particular node, and every transfer being a walk of the tree.
 '''
 
 import math
-from sortedcontainers import SortedSet
+from sortedcontainers import SortedSet # http://grantjenks.com/docs/sortedcontainers/
 
 def hill(dist, m_c, m_p):
     '''
@@ -53,7 +53,7 @@ class AstroBody:
         '''
         Records orbital lanes available for AstroBodies.
         Any radius within some range (x_{2i}, x_{2i + 1}) is available.
-        Any radius within some range (x+{2i - 1}, x_{2i}) is not.
+        Any radius within some range (x_{2i - 1}, x_{2i}) is not.
         '''
         self.available = SortedSet([0])
 

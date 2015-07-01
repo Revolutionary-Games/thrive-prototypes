@@ -18,12 +18,12 @@ pygame.mouse.set_visible(True)
 clock = pygame.time.Clock()
 
 faces = {
-    'A': sphube.Face('A', 50), # all 100x100
-    'B': sphube.Face('B', 50),
-    "C": sphube.Face('C', 50),
-    "D": sphube.Face('D', 50),
-    "E": sphube.Face('E', 50),
-    "F": sphube.Face('F', 50),
+    'A': sphube.Face('A', 100), # all 100x100
+    'B': sphube.Face('B', 100),
+    "C": sphube.Face('C', 100),
+    "D": sphube.Face('D', 100),
+    "E": sphube.Face('E', 100),
+    "F": sphube.Face('F', 100),
 }
 
 #A
@@ -47,9 +47,11 @@ for c in 'ABCDEF':
     for x in xrange(-50, 50):
         for y in xrange(-50, 50):
             p = ar[offset[0] + x][offset[1] - y - 1] # hack cuz pygame y is the wrong way
+            
             s = int(face.area_metric(85, (x,y)))
+            #s = int(face.length_metric(147, (x,y)))
             p[0] = s
-            p[1] = 255 - s
+            
             #l = int(face.latitude((x, y)) * 80) + 130
             #p[0] = l if l%8 in [0,1,2,3] else 0
             #p[1] = 255 - l if l%8 in [0,1,2,3] else 0

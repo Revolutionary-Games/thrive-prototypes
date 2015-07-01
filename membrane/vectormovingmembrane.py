@@ -105,7 +105,7 @@ def within(a,b,lim=5):
 class controlpoint:
     def __init__(self):
         self.pos = Vector(random.randint(300,700),random.randint(300,700),random.randint(-200,200))
-        self.mass = random.randint(5,15)
+        self.mass = 15
         self.spos = tospherical(self.pos)
         self.colour = (0,0,255)
         self.norm = norm(self.pos)
@@ -183,8 +183,8 @@ def makeOrganelles(n):
     controlpoints[:] = [] # clear contents of the list
     for i in range(0, n):
         controlpoints.append(controlpoint())
-        controlpoints[0].pos = Vector(500,500,0)
-        controlpoints[0].mass = 20
+    controlpoints[0].pos = Vector(500,500,0)
+    controlpoints[0].mass = 20
 
 makeOrganelles(10)
 
