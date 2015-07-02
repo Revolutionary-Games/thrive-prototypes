@@ -79,8 +79,8 @@ the outer surface):
     A
     BCDE
     F
-the +x direction on each face points rightwards, and
-the +y direction on each points upwards.
+  the +x direction on each face points rightwards, and
+  the +y direction on each points upwards.
 
 The faces of the sphube don't worry about this edges
 stitching, that's the sphube's job.
@@ -92,9 +92,13 @@ class Face:
         assert orientation in 'ABCDEF'
         self.orientation = orientation
         self.dim = dim/2 # == max_x == max_y == (-min_x) == (-min_y)
-        #self.data = numpy.zeros((dim*2, dim*2)) # indexed in [x][y] order
+        self.data = numpy.zeros((self.dim*2, self.dim*2)) # indexed in [x][y] order
 
     def length_metric(self, length, position):
+        '''
+        Given a short distance on the cube, returns the same distance when projected
+        to the sphere
+        '''
         hyp = math.hypot(position[0], position[1])
         hyp /= self.dim
         assert hyp <= sqrt2
@@ -118,10 +122,39 @@ class Face:
         lat = math.atan(position[1] / math.hypot(self.dim, position[0]))
         return lat
 
+    def longitude(self, position):
+        assert -self.dim <= position[0] <= self.dim
+        assert -self.dim <= position[1] <= self.dim
+        x = position[0]
+        y = position[1]
+        if self.orientation in 'AF':
+            # polar
+            if x is 0 and y is 0: return 0
+            if self.orientation is 'A': y = -y # switch to F if weird
+            l = math.atan2(x, y)
+            if x < 0:
+                l += 2 * math.pi
+        elif self.orientation is 'B':
+            l = math.atan2(self.dim, -x) - math.pi / 2
+        elif self.orientation is 'C':
+            l = math.atan2(self.dim, -x)
+        elif self.orientation is 'D':
+            l = math.atan2(self.dim, -x) + math.pi/2
+        elif self.orientation is 'E':
+            l = math.atan2(self.dim, -x) + math.pi
+        #l -= 7*math.pi/4 # this shifts the prime meridian to avoid a seam within a face
+        if l < 0: l += 2*math.pi
+        return l
+
+
 
 class Sphube:
-    def __init__(self, r = 45):
-        face_side = r / sqrt3
+    def __init__(self, r = 45, face_side = None):
+        if face_side is None:
+            face_side = r / sqrt3
+            self.r = r
+        else:
+            self.r = face_side * sqrt3
         self.faces = {
             "A": Face("A", face_side),
             "B": Face("B", face_side),
@@ -130,4 +163,3 @@ class Sphube:
             "E": Face("E", face_side),
             "F": Face("F", face_side),
         }
-        self.r = r

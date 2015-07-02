@@ -48,14 +48,19 @@ for c in 'ABCDEF':
         for y in xrange(-50, 50):
             p = ar[offset[0] + x][offset[1] - y - 1] # hack cuz pygame y is the wrong way
             
-            s = int(face.area_metric(85, (x,y)))
+            #s = int(face.area_metric(85, (x,y)))
             #s = int(face.length_metric(147, (x,y)))
-            p[0] = s
+            #p[0] = s
             
             #l = int(face.latitude((x, y)) * 80) + 130
             #p[0] = l if l%8 in [0,1,2,3] else 0
             #p[1] = 255 - l if l%8 in [0,1,2,3] else 0
             #p[2] = l if l%8 in [4,5,6,7] else 0
+
+            lat = abs(int(face.latitude((x, y)) * 120))
+            lon = int(face.longitude((x, y)) * 30)
+            p[0] = lon
+            p[1] = lat
 del ar
 
 run = True
