@@ -3,6 +3,8 @@ import math
 import random
 from pygame.locals import *
 
+clock = pygame.time.Clock()
+
 #setup
 
 background_colour = (255,255,255)
@@ -75,6 +77,8 @@ while running:
 
 	screen.fill(background_colour)
 
+	clock.tick()
+
 
 	#generate the potential field and from it the vector field
 	for i in range(x_size - 1):
@@ -91,6 +95,7 @@ while running:
 	time += 1
 	if time >= 50:
 		time = 0
+		print clock.get_fps()
 
 
 	pygame.display.flip()
