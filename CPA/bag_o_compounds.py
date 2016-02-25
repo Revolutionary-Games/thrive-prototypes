@@ -45,7 +45,7 @@ run_time = 100
 
 #initialise the chemicals
 for i in range(number_of_chemicals):
-	chemicals.append(random.randint(0,3))
+	chemicals.append(random.randint(0,30))
 	low_threshold.append(10)
 	concentrations.append(0)
 compute_concentrations()
@@ -65,7 +65,9 @@ processes = [[0,1],[1,0]]
 
 def run_processes():
 	for process in processes:
-		rate = step_function(chemicals[process[1]], low_threshold[process[1]])
+		rate = max((step_function(chemicals[process[1]], low_threshold[process[1]])*
+				1 - step_function(chemicals[process[0]], low_threshold[process[0]])),0)
+		print rate,
 		if chemicals[process[0]] > rate:
 			chemicals[process[0]] -= rate
 			chemicals[process[1]] += rate
