@@ -40,7 +40,7 @@ def step_function(value, threshold, high_threshold, vent_threshold):
 	elif value < threshold and threshold != 0 and value >= 0:
 		return 1 - (float(value)/threshold)
 	else:
-		print "error in step function"
+		print "error in step function, I was passed a negative value"
 		return 0
 
 #compute the thresholds of each chemical
