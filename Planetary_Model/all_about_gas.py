@@ -93,3 +93,33 @@ def compute_mass_from_radius(radius):
 	return (float(5515.3*4*math.pi*(radius**3))/3)
 
 print "Minimal planet mass = ", compute_mass_from_radius(radius)
+
+print "Compute largest planet"
+#converge to find the escape velocity of a planet which holds helium to a 10^-100 level
+value = 10000
+
+
+for i in range(1000):
+	#compute the fraction of the gas that is as fast as the escape velocity
+	fraction = compute_maxwell_boltzmann(molecular_mass_helium/Avagadro, 273.2, value)
+	#work out whether this is larger or smaller than the desired amount in orders of magnitude
+	difference = (fraction/1e-100)
+	#alter the escape velocity accordingly
+	if difference >= 1:
+		value += 10
+	else:
+		value -= 10
+
+print "Maximal value of escape velocity from temperature = ", value
+
+def compute_radius_from_escape_velocity(velocity):
+	return math.sqrt(float(3*(velocity**2))/(8*math.pi*5515.3*gravity_constant))
+
+radius = compute_radius_from_escape_velocity(value)
+
+print "Maximal planet radius = ", radius
+
+def compute_mass_from_radius(radius):
+	return (float(5515.3*4*math.pi*(radius**3))/3)
+
+print "Maximal planet mass = ", compute_mass_from_radius(radius)
