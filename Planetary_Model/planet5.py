@@ -23,6 +23,12 @@ oxygen_param = 0.3 # amount of sunlght ozone can block if atmosphere is 100 oxge
 carbon_dioxide_param = 0.3 # same
 water_vapour_param = 0.3 #same
 detail = 3#number of different values of CO2 and O2 to check, more is better but very intensive
+minimum_planet_radius = 4065942 #smallest radius allowed, see http://forum.revolutionarygamesstudio.com/t/planet-generation/182/10
+maximum_planet_radius = 9191080 #largest radius allowed
+density_of_earth = 5515.3 #kg m^-3, assume all planets are the same density as earth
+percentage_atmopshere = 8.62357669e-7 #percentage of the earths mass which is atmosphere
+percentage_ocean = 2.26054923e-7 #percentage that is ocean
+percentage_lithosphere = 1.67448091e-7 #percentage that is rock, just a guess in line with others
 
 #list of compounds, see http://forum.revolutionarygamesstudio.com/t/cpa-master-list/167
 compounds = ["Sulfur", "Hydrogen Sulfide", "Water", "Oxygen", "Nitrogen", 
@@ -208,8 +214,9 @@ class planet:
 		#inherit orbital radius and parent
 		self.orbital_radius = orbital_radius[0]
 		self.parent_star = parent_star
-		#compute the planets radius, for now just the radius of the earth
-		self.radius = Radius_of_the_earth
+		#compute the planets radius and from it derive the mass
+		self.radius = random.randint(minimum_planet_radius, maximum_planet_radius)
+		self.mass = density_of_earth*4*math.pi*(self.radius**3)/3
 		#compute the planets orbital period using Kepler's law https://en.wikipedia.org/wiki/Orbital_period
 		self.orbital_period = 2*math.pi*math.sqrt((self.orbital_radius**3)/self.parent_star.gravitational_parameter)
 		#create 3 bins, atmosphere, ocean and lithosphere
@@ -221,12 +228,13 @@ class planet:
 			self.ocean[str(compound)] = 0
 			self.lithosphere[str(compound)] = 0
 		#decide the mass of the atmosphere
-		self.atmosphere_mass = 5.15e18 #kg = mass of atmosphere of earth
-		self.ocean_mass = 1.4e21 #kg = mass of the oceans on earth
-		self.lithosphere_mass = 1e10 # kg = just a guess for a store of compounds
+		self.atmosphere_mass = self.mass*percentage_atmopshere #kg
+		self.ocean_mass = self.mass*percentage_ocean #kg
+		self.lithosphere_mass = self.mass*percentage_lithosphere # kg, just a guess in line with the values for ocean and atm
 		#use percentages to set the constituents of the atmosphere, ocean and lithosphere
-		self.atmosphere["Nitrogen"] = self.atmosphere_mass*0.7
-		self.atmosphere["Carbon Dioxide"] = self.atmosphere_mass*0.3
+		self.atmosphere["Nitrogen"] = self.atmosphere_mass*0.6
+		self.atmosphere["Carbon Dioxide"] = self.atmosphere_mass*0.2
+		self.atmosphere["Oxygen"] = self.atmosphere_mass*0.2
 		self.ocean["Water"] = self.ocean_mass*0.8
 		self.ocean["Nitrogen"] = self.ocean_mass*0.2
 		self.ocean["Carbon Dioxide"] = self.ocean_mass*0.1
@@ -241,7 +249,8 @@ class planet:
 		print " "
 		print "Created new planet."
 		print "Orbital radius = ", '%.2e' % self.orbital_radius, " meters."
-		print "Radius = Radius of the earth = ", '%.2e' % self.radius, " meters."
+		print "Radius = ", '%.2e' % self.radius, " meters."
+		print "Mass = ",'%.2e' % self.mass, " kg."
 		print "Orbital period = ", '%.2e' % self.orbital_period, " seconds = ", self.orbital_period/3.154e+7, " earth years = 1 year for this planet."
 		print "Atmosphere = ", self.atmosphere
 		print "Ocean = ", self.ocean
