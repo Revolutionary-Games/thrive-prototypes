@@ -2,6 +2,12 @@
 import math
 import random
 
+Earth = True # should you generate the Earth as closely as possible?
+if Earth: 
+	print "Generating the Earth as closely as possible"
+else:
+	print "Generating a new planet!"
+
 Gravitational_Constant = 6.674e-11# Newtons Meters^2 / kg^2
 Luminosity_of_our_sun = 3.846e26 #watts
 Mass_of_our_sun = 1.989e30 #kg
@@ -23,12 +29,27 @@ oxygen_param = 0.3 # amount of sunlght ozone can block if atmosphere is 100 oxge
 carbon_dioxide_param = 0.3 # same
 water_vapour_param = 0.3 #same
 detail = 3#number of different values of CO2 and O2 to check, more is better but very intensive
-minimum_planet_radius = 4065942 #smallest radius allowed, see http://forum.revolutionarygamesstudio.com/t/planet-generation/182/10
+minimum_planet_radius = 5375699 #smallest radius allowed, see http://forum.revolutionarygamesstudio.com/t/planet-generation/182/10
 maximum_planet_radius = 9191080 #largest radius allowed
 density_of_earth = 5515.3 #kg m^-3, assume all planets are the same density as earth
 percentage_atmopshere = 8.62357669e-7 #percentage of the earths mass which is atmosphere
 percentage_ocean = 2.26054923e-7 #percentage that is ocean
 percentage_lithosphere = 1.67448091e-7 #percentage that is rock, just a guess in line with others
+fudge_factor_nitrogen = 7.28704114055e-10 #calibrate the spectral computations using earths atmosphere
+fudge_factor_water = 6.34362956432e-09 #same
+fudge_factor_carbon_dioxide = 1.55066500461e-08 #same
+fudge_factor_oxygen = 3.42834549545e-09 #same
+Avagadro = 6.022e23 #avagadros constant relating number of atoms to mass
+molecular_mass_carbon_dioxide = 0.044 # kg mol^-1, mass of 1 mole of CO2
+molecular_mass_oxygen = 0.032 # kg mol^-1, mass of 1 mole of O2
+molecular_mass_nitrogen = 0.028 # kg mol^-1, mass of 1 mole of N2
+molecular_mass_water = 0.018 # kg mol^-1, mass of 1 mole of H2O
+diameter_water = 9.0e-11 #meters, size of a water molecule for interaction with light
+diameter_nitrogen = 7.5e-11 # meters	
+diameter_carbon_dioxide = 9e-11 #meters
+diameter_oxygen = 7.3e-11 #meters
+
+
 
 #list of compounds, see http://forum.revolutionarygamesstudio.com/t/cpa-master-list/167
 compounds = ["Sulfur", "Hydrogen Sulfide", "Water", "Oxygen", "Nitrogen", 
@@ -65,65 +86,87 @@ def generate_stellar_spectrum(temperature):
 		result.append(planks_law(temperature, wavelength_step*(i + 1)))
 	return result
 
+#simple formula for surface area of a sphere
+def compute_surface_area_from_radius(radius):
+	return 4*math.pi*(radius**2) 
+
+#how much gas is there in a column above 1sq meter of land?
+def mass_of_gas_in_1sqm(radius, mass_of_gas):
+	surface_area = compute_surface_area_from_radius(radius)
+	mass_in_1sqm = float(mass_of_gas)/surface_area
+	return mass_in_1sqm
+
+#how many atoms are there in a column above 1sq m of land?
+def atoms_of_gas_in_1sqm(radius, mass_of_gas, molecular_mass):
+	mass_in_1sqm = mass_of_gas_in_1sqm(radius, mass_of_gas)
+	number_of_moles = float(mass_in_1sqm)/molecular_mass
+	number_of_atoms = number_of_moles*Avagadro
+	return number_of_atoms
+
+#what percentage of the light should make it through?
+def attenuation_parameter(fudge_factor, radius, mass_of_gas, molecular_mass, molecular_area):
+	number_of_atoms = atoms_of_gas_in_1sqm(radius, mass_of_gas, molecular_mass)
+	exponent = -fudge_factor*number_of_atoms*molecular_area
+	return math.exp(exponent)
+
 #compute how the light is filtered through the atmosphere, values from http://irina.eas.gatech.edu/EAS8803_Fall2009/Lec6.pdf
-def compute_light_filter(atmosphere):
+def compute_light_filter(atmosphere, mass_of_atmosphere, planetary_radius):
 	result = []
 	for i in range(dimension_of_sample):
 		result.append(1)
 	#what percentage of light to block for different compounds?
-	Water = 1 
-	Nirogen = 1 
-	Oxygen = 1 
-	Carbon_Dioxide = 1
-	if atmosphere["Oxygen"] != 0:
-		Oxygen = 0.3
-	if atmosphere["Carbon Dioxide"] != 0:
-		Carbon_Dioxide = 0.3
-	if atmosphere["Nitrogen"] != 0:
-		Nitrogen = 0.3
-	if atmosphere["Water"] != 0:
-		Water = 0.3
+	#this value is the base and on earth, for all of them, it should be 0.5
+	#this base value is then, as below, multiplied by a scaling factor based on wavelength
+	Water = attenuation_parameter(fudge_factor_water, planetary_radius, atmosphere["Water"],
+					molecular_mass_water, diameter_water**2)
+	Nitrogen = attenuation_parameter(fudge_factor_nitrogen, planetary_radius, atmosphere["Nitrogen"],
+					molecular_mass_nitrogen, diameter_nitrogen**2)
+	Oxygen = attenuation_parameter(fudge_factor_oxygen, planetary_radius, atmosphere["Oxygen"],
+					molecular_mass_oxygen, diameter_oxygen**2) 
+	Carbon_Dioxide = attenuation_parameter(fudge_factor_carbon_dioxide, planetary_radius, atmosphere["Carbon Dioxide"],
+					molecular_mass_carbon_dioxide, diameter_carbon_dioxide**2)
+	print Water, Nitrogen, Oxygen, Carbon_Dioxide
 	#which frequencies to filter. result[i] = i*0.05 microns (micrometers)
-	result[1] *= Nitrogen*Oxygen*Water
-	result[2] *= Nitrogen*Oxygen*Water
-	result[3] *= Oxygen*Water
-	result[4] *= Oxygen*Water
-	result[5] *= Oxygen
-	result[6] *= Oxygen
-	result[7] *= Oxygen
-	result[8] *= 1
-	result[9] *= Oxygen
-	result[10] *= Oxygen
-	result[11] *= Oxygen
-	result[12] *= Oxygen*Water
-	result[13] *= Oxygen*Water
-	result[14] *= Water*Oxygen
-	result[15] *= Oxygen
-	result[16] *= Water*Oxygen
-	result[17] *= Oxygen
+	result[1] *= 1.6*Nitrogen*0.4*Oxygen*Water
+	result[2] *= 1.6*Nitrogen*0.4*Oxygen*Water
+	result[3] *= 0.4*Oxygen*0.4*Water
+	result[4] *= 0.4*Oxygen*0.4*Water
+	result[5] *= 0.4*Oxygen
+	result[6] *= 0.4*Oxygen
+	result[7] *= 0.4*Oxygen
+	result[8] *= 0.6*Oxygen
+	result[9] *= 0.6*Oxygen
+	result[10] *= 0.6*Oxygen
+	result[11] *= 0.6*Oxygen
+	result[12] *= 0.6*Oxygen*0.4*Water
+	result[13] *= 0.6*Oxygen*0.4*Water
+	result[14] *= 0.4*Water*0.6*Oxygen
+	result[15] *= 0.6*Oxygen
+	result[16] *= 0.4*Water*1*Oxygen
+	result[17] *= 0.6*Oxygen
 	result[18] *= 1
-	result[19] *= Water
+	result[19] *= 0.4*Water
 	result[20] *= 1
-	result[21] *= Oxygen
-	result[22] *= Water
+	result[21] *= 0.4*Oxygen
+	result[22] *= 0.4*Water
 	result[23] *= 1
 	result[24] *= 1
-	result[25] *= Oxygen
+	result[25] *= 0.4*Oxygen
 	result[26] *= 1
-	result[27] *= Water
-	result[28] *= Carbon_Dioxide
+	result[27] *= 1*Water
+	result[28] *= 0.6*Carbon_Dioxide
 	result[29] *= 1
-	result[30] *= Carbon_Dioxide
+	result[30] *= 0.2*Carbon_Dioxide
 	result[31] *= 1
-	result[32] *= Oxygen
+	result[32] *= 0.4*Oxygen
 	result[33] *= 1
 	result[34] *= 1
 	result[35] *= 1
 	result[36] *= 1
-	result[37] *= Water
+	result[37] *= 1*Water
 	result[38] *= 1
 	result[39] *= 1
-	result[40] *= Carbon_Dioxide
+	result[40] *= 1*Carbon_Dioxide
 	result[41] *= 1
 	result[42] *= 1
 	result[43] *= 1
@@ -131,8 +174,8 @@ def compute_light_filter(atmosphere):
 	result[45] *= 1
 	result[46] *= 1	
 	result[47] *= 1
-	result[48] *= 1
-	result[49] *= 1
+	result[48] *= 2*Water
+	result[49] *= 2*Water
 	return result
 
 #combine two light spectra (just multiply the elements)
@@ -215,7 +258,10 @@ class planet:
 		self.orbital_radius = orbital_radius[0]
 		self.parent_star = parent_star
 		#compute the planets radius and from it derive the mass
-		self.radius = random.randint(minimum_planet_radius, maximum_planet_radius)
+		if Earth:
+			self.radius = Radius_of_the_earth
+		else:
+			self.radius = random.randint(minimum_planet_radius, maximum_planet_radius)
 		self.mass = density_of_earth*4*math.pi*(self.radius**3)/3
 		#compute the planets orbital period using Kepler's law https://en.wikipedia.org/wiki/Orbital_period
 		self.orbital_period = 2*math.pi*math.sqrt((self.orbital_radius**3)/self.parent_star.gravitational_parameter)
@@ -232,9 +278,10 @@ class planet:
 		self.ocean_mass = self.mass*percentage_ocean #kg
 		self.lithosphere_mass = self.mass*percentage_lithosphere # kg, just a guess in line with the values for ocean and atm
 		#use percentages to set the constituents of the atmosphere, ocean and lithosphere
-		self.atmosphere["Nitrogen"] = self.atmosphere_mass*0.6
-		self.atmosphere["Carbon Dioxide"] = self.atmosphere_mass*0.2
+		self.atmosphere["Nitrogen"] = self.atmosphere_mass*0.72
+		self.atmosphere["Carbon Dioxide"] = self.atmosphere_mass*0.04
 		self.atmosphere["Oxygen"] = self.atmosphere_mass*0.2
+		self.atmosphere["Water"] = self.atmosphere_mass*0.04
 		self.ocean["Water"] = self.ocean_mass*0.8
 		self.ocean["Nitrogen"] = self.ocean_mass*0.2
 		self.ocean["Carbon Dioxide"] = self.ocean_mass*0.1
@@ -242,7 +289,7 @@ class planet:
 		self.lithosphere["Hydrogen Sulfide"] = self.lithosphere_mass*0.5
 		self.lithosphere["Carbon Dioxide"] = self.lithosphere_mass*0.5
 		#use the atmospheric composition to compute the light filtering
-		self.light_filter = compute_light_filter(self.atmosphere)
+		self.light_filter = compute_light_filter(self.atmosphere, self.atmosphere_mass, self.radius)
 		#compute the light on the surface
 		self.light_on_surface = combine(self.light_filter, self.parent_star.spectrum)
 
@@ -261,7 +308,10 @@ class planet:
 class star:
 	def __init__(self):
 		#Measured in multiples of the the sun's mass
-		self.mass = random.uniform(0.5,3)
+		if Earth:
+			self.mass = 1
+		else:
+			self.mass = random.uniform(0.5,3)
 		#Number of our years the star will live for
 		self.life_span = get_life_span(self.mass)
 		#because the lifespans of the stars are so short there can be no life around
