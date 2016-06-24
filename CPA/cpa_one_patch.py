@@ -286,6 +286,7 @@ class species:
 
 				#determine how much to act, do nothing if they are both equally far from their optimals
 				rate = smoothing_factor*max(output_rate - input_rate,0)
+				#print any errors
 				if rate > 1:
 					print "rate = ", rate
 
@@ -355,6 +356,7 @@ class species:
 		pop_increase = 10000
 		for compound in compounds:
 			possible_pop_increase = 10000
+			#work out which compound is the limiting one
 			if self.made_of[str(compound)] > 0:
 				possible_pop_increase = (self.growth_rate*self.compounds_free[str(compound)]/
 						self.made_of[str(compound)])
@@ -387,6 +389,7 @@ class patch:
 		#set environmental compounds
 		self.compounds = dict(ocean_values)
 
+	#mix the patch with the ocean, control with "rate_of_convergence to ocean" and "relative _mass_of_ocean"
 	def move_to_optimal(self):
 		global ocean_values
 		for compound in compounds:
@@ -397,7 +400,7 @@ class patch:
 
 
 
-
+#the main class which holds the patches
 class ocean:
 	def __init__(self):
 		#make some patches
@@ -406,9 +409,12 @@ class ocean:
 			self.patches.append(patch(i))
 		self.data = []
 
+	#advance the simultion by one time step
 	def run_world(self):
 		for patch in self.patches:
+			#mix the ocean and the patch a little
 			patch.move_to_optimal()
+			#for each species run their different processes
 			for species in patch.species:
 				species.vent()
 				species.run_organelles()
@@ -419,7 +425,7 @@ class ocean:
 our_ocean = ocean()
 
 #Back to pygame stuff for displaying the data
-
+#draw a graph of a string of data
 def draw_graph(data, max_value, colour = [0,0,255]):
 	pygame.draw.line(screen, [255,0,0], [10, height - 110], [width - 150, height - 110], 5)
 	pygame.draw.line(screen, [255,0,0], [10, height - 110], [10, 100], 5)
@@ -432,9 +438,12 @@ def draw_graph(data, max_value, colour = [0,0,255]):
 		current_point = new_point
 	pygame.display.flip()
 
+#this is the data which will be drawn
 data = []
 for i in range(no_species_per_patch):
 	data.append([])
+print "Press SPACE to start."
+#what to do when space is pressed and the simulation is advanced 
 def advance():
 	global data
 	length_of_sim = 10000
@@ -443,18 +452,16 @@ def advance():
 		percent_complete = i/steps_per_percent
 		if i % steps_per_percent == 0:
 			print percent_complete, ": percent complete"
+		#run the world and collect the data to display
 		our_ocean.run_world()
 		for j in range(no_species_per_patch):
 			if percent_complete >= 10:
 				data[j].append(our_ocean.patches[0].species[j].population)
-	#for patch in our_ocean.patches:
-	#	for species in patch.species:
-	#		print patch.number, species.number, species.population,
-	#print "Next Step"
+	#draw the data
 	for data_set in data:
 		draw_graph(data_set, max(data_set), colour = [random.randint(0,255), random.randint(0,255), random.randint(0,255)])
 
-
+#main loop, halt means wait for SPACE to be pressed, running means don't quit
 halt = True
 running = True
 while running:
