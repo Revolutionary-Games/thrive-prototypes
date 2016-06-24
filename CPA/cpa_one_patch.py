@@ -40,16 +40,17 @@ permeability = {"Sunlight" : 1, "Sulfur" : 1, "Hydrogen Sulfide" : 1, "Oxygen" :
 			"Ammonia" : 1, "Agent" : 1, "Nucleotide" : 1, "DNA" : 1}
 
 #initialise
-no_species_per_patch = 3
+no_species_per_patch = 5
 #there must be 5 copies for auto-evo!
-no_of_patches = 5
+no_of_patches = 1
 #how many organelles should the species have when they spawn?
-lower_organelles_per_species = 1
-upper_organelles_per_species = 10
+lower_organelles_per_species = 10
+upper_organelles_per_species = 20
 smoothing_factor = 0.1 #if the graphs are super spikey then slow down the processes with this
 global_absorbtion_factor = 1 # slow down absorbtion with this
 ocean_changes = False #can the species change the ocean_values over time?
 relative_mass_of_ocean = 0.000001 #how fast should the ocean change?
+rate_of_convergence_to_ocean = 0.01 #how fast (from 0 to 1) should the pax mix with the ocean?
 
 #processes class
 class process:
@@ -390,9 +391,9 @@ class patch:
 		global ocean_values
 		for compound in compounds:
 			difference = self.compounds[str(compound)] - ocean_values[str(compound)]
-			self.compounds[str(compound)] -= 0.01*difference
+			self.compounds[str(compound)] -= rate_of_convergence_to_ocean*difference
 			if ocean_changes:
-				ocean_values[str(compound)] += 0.01*relative_mass_of_ocean*difference
+				ocean_values[str(compound)] += rate_of_convergence_to_ocean*relative_mass_of_ocean*difference
 
 
 
@@ -419,13 +420,40 @@ our_ocean = ocean()
 
 #Back to pygame stuff for displaying the data
 
+def draw_graph(data, max_value, colour = [0,0,255]):
+	pygame.draw.line(screen, [255,0,0], [10, height - 110], [width - 150, height - 110], 5)
+	pygame.draw.line(screen, [255,0,0], [10, height - 110], [10, 100], 5)
+	y_scaling = float(height - 210)/max_value
+	x_scaling = float(width-180)/len(data)
+	current_point = [10,(height - 110) - data[0]*y_scaling]
+	for i in range(len(data)):
+		new_point = [10 + i*x_scaling, (height - 110) - data[i]*y_scaling]
+		pygame.draw.line(screen, colour, current_point, new_point, 5)
+		current_point = new_point
+	pygame.display.flip()
+
+data = []
+for i in range(no_species_per_patch):
+	data.append([])
 def advance():
-	for i in range(100):
+	global data
+	length_of_sim = 10000
+	steps_per_percent = length_of_sim/100
+	for i in range(length_of_sim):
+		percent_complete = i/steps_per_percent
+		if i % steps_per_percent == 0:
+			print percent_complete, ": percent complete"
 		our_ocean.run_world()
-		for patch in our_ocean.patches:
-			for species in patch.species:
-				print patch.number, species.number, species.population,
-		print "Next Step"
+		for j in range(no_species_per_patch):
+			if percent_complete >= 10:
+				data[j].append(our_ocean.patches[0].species[j].population)
+	#for patch in our_ocean.patches:
+	#	for species in patch.species:
+	#		print patch.number, species.number, species.population,
+	#print "Next Step"
+	for data_set in data:
+		draw_graph(data_set, max(data_set), colour = [random.randint(0,255), random.randint(0,255), random.randint(0,255)])
+
 
 halt = True
 running = True
@@ -439,12 +467,6 @@ while running:
 	        if event.key == K_SPACE:
 	        	advance()
 
-
-	screen.fill(background_colour)
-
-	
-
-	pygame.display.flip()
 	
 	clock.tick(60)
 
