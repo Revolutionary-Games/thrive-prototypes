@@ -240,6 +240,7 @@ class species:
 		#pick a colour for your graph
 		self.colour = [random.randint(0,255), random.randint(0,255), random.randint(0,255)]
 
+
 	#compute the action of each chemical
 	def compute_action(self):
 		for compound in compounds:

@@ -51,6 +51,7 @@ global_absorbtion_factor = 1 # slow down absorbtion with this
 ocean_changes = False #can the species change the ocean_values over time?
 relative_mass_of_ocean = 0.000001 #how fast should the ocean change?
 rate_of_convergence_to_ocean = 0.01 #how fast (from 0 to 1) should the pax mix with the ocean?
+base_predation_rate = 0.01 #how fast should predation be? << 1
 
 #processes class
 class process:
@@ -209,6 +210,13 @@ def step_function(value, threshold, high_threshold, vent_threshold):
 		print "error in step function, I was passed a negative value"
 		return 0
 
+#this function takes the strengths of the two species and returns the rate of predation between them
+#at the moment it is super simple as this whole concept needs work
+#it should be anti-symmetric so (1,2) = -(2,1) as the flow is the same but opposite
+#it should return a value between 0 and 1 but 1 means transfer ALL compounds per time step
+def compute_predation(species_1_strength, species_2_strength):
+	return base_predation_rate*(species_1_strength - species_2_strength)
+
 #species class
 class species:
 	def __init__(self, number, patch):
@@ -258,6 +266,8 @@ class species:
 		self.compute_surface_area()
 		#pick a colour for your species
 		self.colour = [random.randint(0,255), random.randint(0,255), random.randint(0,255)]
+		#set a strength for the species, this needs to be done intelligently
+		self.strength = random.uniform(0,1)
 
 	#compute the action of each chemical
 	def compute_action(self):
@@ -386,8 +396,63 @@ class patch:
 		self.species = []
 		for i in range(no_species_per_patch):
 			self.species.append(species(i, self))
+		#compute the predation relations
+		self.predation_relations = []
+		self.compute_predation_relations()
 		#set environmental compounds
 		self.compounds = dict(ocean_values)
+
+	def compute_predation_relations(self):
+		#make a sqaure matrix of the right size
+		for i in range(no_species_per_patch):
+			self.predation_relations.append([])
+			for j in range(no_species_per_patch):
+				#only put entries in the upper diagonal
+				if i >= j:
+					self.predation_relations[i].append(0)
+				#otherwise add an entry to the matrix
+				else:
+					self.predation_relations[i].append(
+						compute_predation(self.species[i].strength, self.species[j].strength))
+
+	#move compunds based on the predation relations
+	def run_predation(self):
+		#the list of actions should be randomised because whoever gets the first move gets more
+		#because each species takes a %age of the total so if the first species gets 5% of 1
+		#then the second species gets 5% of 0.95 even though they are supposed to get the same
+		list_of_predations = []
+		total_patch_population = 0
+		for specie in self.species:
+			total_patch_population += specie.population
+		for i in range(no_species_per_patch):
+			for j in range(no_species_per_patch):
+				population_densities = float(self.species[i].population*
+					self.species[j].population)/total_patch_population
+				list_of_predations.append([i,j,population_densities*self.predation_relations[i][j]])
+
+		random.shuffle(list_of_predations)
+
+		for predation in list_of_predations:
+			self.move_compounds(predation[0], predation[1], predation[2])
+
+	#take compounds from the prey and give them to the predator
+	def move_compounds(self, i,j,amount):
+		for compound in compounds:
+			#you get amount% of their free and locked bins, whose bin it is matters			
+			if amount >= 0:
+				amount_to_move_free = amount*self.species[i].compounds_free[str(compound)]
+				amount_to_move_locked = amount*self.species[i].compounds_locked[str(compound)]
+			else:
+				amount_to_move_free = amount*self.species[j].compounds_free[str(compound)]
+				amount_to_move_locked = amount*self.species[j].compounds_locked[str(compound)]
+			#do it for compounds free
+			amount_to_move = amount*self.species[i].compounds_free[str(compound)]
+			self.species[i].compounds_free[str(compound)] -= amount_to_move_free
+			self.species[j].compounds_free[str(compound)] += amount_to_move_free
+			#and compounds locked
+			amount_to_move = amount*self.species[i].compounds_locked[str(compound)]
+			self.species[i].compounds_locked[str(compound)] -= amount_to_move_locked
+			self.species[j].compounds_locked[str(compound)] += amount_to_move_locked
 
 	#mix the patch with the ocean, control with "rate_of_convergence to ocean" and "relative _mass_of_ocean"
 	def move_to_optimal(self):
@@ -421,6 +486,8 @@ class ocean:
 				species.absorb()
 				species.grow()
 				species.die()
+			#run the predation in the patch
+			patch.run_predation()
 
 our_ocean = ocean()
 
