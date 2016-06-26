@@ -4,6 +4,7 @@ import pygame
 import math
 import random
 from pygame.locals import *
+import copy
 
 #setup, just PYGAME stuff and not required.
 
@@ -41,10 +42,10 @@ permeability = {"Sunlight" : 1, "Sulfur" : 1, "Hydrogen Sulfide" : 1, "Oxygen" :
 
 #initialise
 no_species_per_patch = 5
-#there must be 5 copies for auto-evo!
-no_of_patches = 1
+#this is the number of copies for auto-evo to use when evaluating the 1 patch!
+no_of_patches = 5
 #how many organelles should the species have when they spawn?
-lower_organelles_per_species = 10
+lower_organelles_per_species = 5
 upper_organelles_per_species = 20
 smoothing_factor = 0.1 #if the graphs are super spikey then slow down the processes with this
 global_absorbtion_factor = 1 # slow down absorbtion with this
@@ -52,6 +53,8 @@ ocean_changes = False #can the species change the ocean_values over time?
 relative_mass_of_ocean = 0.000001 #how fast should the ocean change?
 rate_of_convergence_to_ocean = 0.01 #how fast (from 0 to 1) should the pax mix with the ocean?
 base_predation_rate = 0.01 #how fast should predation be? << 1
+length_of_sim = 100 #number of steps to advance when you press the space bar
+steps_between_auto_evos = 30 #number of steps between auto-evo evaluations
 
 #processes class
 class process:
@@ -222,6 +225,8 @@ class species:
 	def __init__(self, number, patch):
 		#starter population
 		self.population = 50
+		#list of 50 past population numbers
+		self.population_memory = []
 		#what patch is the species in
 		self.patch = patch
 		#which number in that patch
@@ -354,12 +359,17 @@ class species:
 	def compute_surface_area(self):
 		self.surface_area = math.sqrt(len(self.organelles))
 
+	#compute the size of the population of the species
 	def compute_population(self):
 		pop = 0
 		for compound in compounds:
 			if self.made_of[str(compound)] > 0:
 				pop = self.compounds_locked[(str(compound))]/self.made_of[str(compound)]
 		self.population = pop
+		#keep a list of the last 50 values (to smooth out rapid oscillations)
+		self.population_memory.append(pop)
+		if len(self.population_memory) > 50:
+			self.population_memory.pop(0)
 
 	#grow new members of the species by moving compounds free -> locked bins
 	def grow(self):
@@ -376,7 +386,6 @@ class species:
 		for compound in compounds: 
 			self.compounds_free[str(compound)] -= self.made_of[str(compound)]*pop_increase
 			self.compounds_locked[str(compound)] += self.made_of[str(compound)]*pop_increase
-		self.compute_population()
 
 	def die(self):
 		#some of your species die, that means losing compounds to the environment
@@ -386,6 +395,7 @@ class species:
 			#drop compounds
 			self.compounds_locked[str(compounds)] -= amount_to_lose
 			self.patch.compounds[str(compounds)] += amount_to_lose
+		self.compute_population()
 
 
 #patch class
@@ -473,6 +483,10 @@ class ocean:
 		for i in range(no_of_patches):
 			self.patches.append(patch(i))
 		self.data = []
+		#which species is auto-evo mutating
+		self.species_under_auto_evo = 0
+		#keep track of how many steps have passed
+		self.time = 0
 
 	#advance the simultion by one time step
 	def run_world(self):
@@ -488,6 +502,30 @@ class ocean:
 				species.die()
 			#run the predation in the patch
 			patch.run_predation()
+		self.time += 1
+		if self.time % steps_between_auto_evos == 0:
+			print "Starting Auto-Evo"
+			self.auto_evo()
+
+	#Auto-evo!
+	def auto_evo(self):
+		#choose the most successful mutation from the last round
+		max_pop = 0
+		best_version = 0
+		for i in range(len(self.patches)):
+			if self.patches[i].species[self.species_under_auto_evo].population >= max_pop:
+				max_pop = self.patches[i].species[self.species_under_auto_evo].population
+				best_version = i
+		print "The best version was in patch ", best_version, " with population ", max_pop
+		new_patches = []
+		new_patches.append(self.patches[best_version])
+		self.patches = new_patches
+		for i in range(no_of_patches - 1):
+			self.patches.append(copy.deepcopy(self.patches[0]))
+		for i in range(no_of_patches):
+			self.patches[i].number = i
+			print self.patches[i].species[0].population
+		#choose a species to be mutated
 
 our_ocean = ocean()
 
@@ -506,14 +544,17 @@ def draw_graph(data, max_value, colour = [0,0,255]):
 	pygame.display.flip()
 
 #this is the data which will be drawn
-data = []
-for i in range(no_species_per_patch):
-	data.append([])
+def reset_data():
+	global data
+	data = []
+	for i in range(no_species_per_patch):
+		data.append([])
+reset_data()
 print "Press SPACE to start."
 #what to do when space is pressed and the simulation is advanced 
 def advance():
 	global data
-	length_of_sim = 10000
+	reset_data()
 	steps_per_percent = length_of_sim/100
 	for i in range(length_of_sim):
 		percent_complete = i/steps_per_percent
@@ -522,9 +563,10 @@ def advance():
 		#run the world and collect the data to display
 		our_ocean.run_world()
 		for j in range(no_species_per_patch):
-			if percent_complete >= 10:
-				data[j].append(our_ocean.patches[0].species[j].population)
+			data[j].append(our_ocean.patches[0].species[j].population)
+
 	#draw the data
+	screen.fill(background_colour)
 	for data_set in data:
 		draw_graph(data_set, max(data_set), colour = [random.randint(0,255), random.randint(0,255), random.randint(0,255)])
 
