@@ -52,9 +52,8 @@ global_absorbtion_factor = 1 # slow down absorbtion with this
 ocean_changes = False #can the species change the ocean_values over time?
 relative_mass_of_ocean = 0.000001 #how fast should the ocean change?
 rate_of_convergence_to_ocean = 0.01 #how fast (from 0 to 1) should the pax mix with the ocean?
-base_predation_rate = 0.01 #how fast should predation be? << 1
+base_predation_rate = 1 #how fast should predation be? << 1
 length_of_sim = 100 #number of steps to advance when you press the space bar
-steps_between_auto_evos = 30 #number of steps between auto-evo evaluations
 
 #processes class
 class process:
@@ -218,7 +217,8 @@ def step_function(value, threshold, high_threshold, vent_threshold):
 #it should be anti-symmetric so (1,2) = -(2,1) as the flow is the same but opposite
 #it should return a value between 0 and 1 but 1 means transfer ALL compounds per time step
 def compute_predation(species_1_strength, species_2_strength):
-	return base_predation_rate*(species_1_strength - species_2_strength)
+	return base_predation_rate*-1*(species_1_strength - species_2_strength)
+
 
 #species class
 class species:
@@ -227,6 +227,8 @@ class species:
 		self.population = 50
 		#list of 50 past population numbers
 		self.population_memory = []
+		#average population over the last 50 steps
+		self.average_population = 0
 		#what patch is the species in
 		self.patch = patch
 		#which number in that patch
@@ -371,6 +373,13 @@ class species:
 		if len(self.population_memory) > 50:
 			self.population_memory.pop(0)
 
+	#work out the average population over the last 50 steps
+	def compute_average_population(self):
+		if len(self.population_memory) > 0:
+			self.average_population = float(sum(self.population_memory))/len(self.population_memory)
+		else:
+			print "Error: Population_Memory is length 0!"
+
 	#grow new members of the species by moving compounds free -> locked bins
 	def grow(self):
 		pop_increase = 10000
@@ -413,6 +422,7 @@ class patch:
 		self.compounds = dict(ocean_values)
 
 	def compute_predation_relations(self):
+		self.predation_relations = []
 		#make a sqaure matrix of the right size
 		for i in range(no_species_per_patch):
 			self.predation_relations.append([])
@@ -437,8 +447,9 @@ class patch:
 		for i in range(no_species_per_patch):
 			for j in range(no_species_per_patch):
 				population_densities = float(self.species[i].population*
-					self.species[j].population)/total_patch_population
-				list_of_predations.append([i,j,population_densities*self.predation_relations[i][j]])
+					self.species[j].population)/(total_patch_population**2)
+				amount_to_move = self.predation_relations[i][j]*population_densities
+				list_of_predations.append([i,j,amount_to_move])
 
 		random.shuffle(list_of_predations)
 
@@ -451,18 +462,18 @@ class patch:
 			#you get amount% of their free and locked bins, whose bin it is matters			
 			if amount >= 0:
 				amount_to_move_free = amount*self.species[i].compounds_free[str(compound)]
-				amount_to_move_locked = amount*self.species[i].compounds_locked[str(compound)]
+				#amount_to_move_locked = amount*self.species[i].compounds_locked[str(compound)]
 			else:
 				amount_to_move_free = amount*self.species[j].compounds_free[str(compound)]
-				amount_to_move_locked = amount*self.species[j].compounds_locked[str(compound)]
+				#amount_to_move_locked = amount*self.species[j].compounds_locked[str(compound)]
 			#do it for compounds free
 			amount_to_move = amount*self.species[i].compounds_free[str(compound)]
 			self.species[i].compounds_free[str(compound)] -= amount_to_move_free
 			self.species[j].compounds_free[str(compound)] += amount_to_move_free
 			#and compounds locked
-			amount_to_move = amount*self.species[i].compounds_locked[str(compound)]
-			self.species[i].compounds_locked[str(compound)] -= amount_to_move_locked
-			self.species[j].compounds_locked[str(compound)] += amount_to_move_locked
+			#amount_to_move = amount*self.species[i].compounds_locked[str(compound)]
+			#self.species[i].compounds_locked[str(compound)] -= amount_to_move_locked
+			#self.species[j].compounds_free[str(compound)] += amount_to_move_locked
 
 	#mix the patch with the ocean, control with "rate_of_convergence to ocean" and "relative _mass_of_ocean"
 	def move_to_optimal(self):
@@ -503,20 +514,24 @@ class ocean:
 			#run the predation in the patch
 			patch.run_predation()
 		self.time += 1
-		if self.time % steps_between_auto_evos == 0:
-			print "Starting Auto-Evo"
-			self.auto_evo()
 
 	#Auto-evo!
 	def auto_evo(self):
 		#choose the most successful mutation from the last round
 		max_pop = 0
 		best_version = 0
+		print "The resulting populations are : "
 		for i in range(len(self.patches)):
-			if self.patches[i].species[self.species_under_auto_evo].population >= max_pop:
-				max_pop = self.patches[i].species[self.species_under_auto_evo].population
+			#tell the species to compute it's average population over the last 50 steps
+			self.patches[i].species[self.species_under_auto_evo].compute_average_population()
+			print " ", i, ":", self.patches[i].species[self.species_under_auto_evo].average_population,
+			#if that pop is greater than the current best then make it the current best
+			if self.patches[i].species[self.species_under_auto_evo].average_population >= max_pop:
+				max_pop = self.patches[i].species[self.species_under_auto_evo].average_population
 				best_version = i
-		print "The best version was in patch ", best_version, " with population ", max_pop
+		print "."
+		print "The best version was in patch ", best_version, " with average population ", max_pop
+		#make a list for the new patches to go in (which are copies of the best patch)
 		new_patches = []
 		new_patches.append(self.patches[best_version])
 		self.patches = new_patches
@@ -524,8 +539,18 @@ class ocean:
 			self.patches.append(copy.deepcopy(self.patches[0]))
 		for i in range(no_of_patches):
 			self.patches[i].number = i
-			print self.patches[i].species[0].population
 		#choose a species to be mutated
+		self.species_under_auto_evo = random.randint(0, no_species_per_patch - 1)
+		print "Mutation will be applied to species ", self.species_under_auto_evo
+		print "Patch 0 will be the control where species ", self.species_under_auto_evo,
+		print " has fight strength ", self.patches[0].species[self.species_under_auto_evo].strength
+		for i in range(1,len(self.patches)):
+			self.patches[i].species[self.species_under_auto_evo].strength = random.uniform(0,1)
+			self.patches[i].compute_predation_relations()		
+			print "In patch ", i, " the fight strength has been set to ",
+			print self.patches[i].species[self.species_under_auto_evo].strength
+
+
 
 our_ocean = ocean()
 
@@ -556,14 +581,18 @@ def advance():
 	global data
 	reset_data()
 	steps_per_percent = length_of_sim/100
+	print "Percentage Completed : ",
 	for i in range(length_of_sim):
 		percent_complete = i/steps_per_percent
-		if i % steps_per_percent == 0:
-			print percent_complete, ": percent complete"
+		if i % 10*steps_per_percent == 0:
+			print percent_complete,
 		#run the world and collect the data to display
 		our_ocean.run_world()
 		for j in range(no_species_per_patch):
 			data[j].append(our_ocean.patches[0].species[j].population)
+	print "done"
+
+	our_ocean.auto_evo()
 
 	#draw the data
 	screen.fill(background_colour)
