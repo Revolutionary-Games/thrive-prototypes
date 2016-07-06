@@ -54,6 +54,7 @@ relative_mass_of_ocean = 0.000001 #how fast should the ocean change?
 rate_of_convergence_to_ocean = 0.01 #how fast (from 0 to 1) should the pax mix with the ocean?
 base_predation_rate = 1 #how fast should predation be? << 1
 length_of_sim = 100 #number of steps to advance when you press the space bar
+predation_scaling = 0.1 #the smaller this number is the less predation will take place
 
 #processes class
 class process:
@@ -145,6 +146,10 @@ processes["Denitrification"] = process("Denitrification",
 						{"Ammonia" : 2,},
 						{"Nitrogen" : 2, "ATP" : 10})
 
+processes["Use Energy"] = process("Use Energy",
+						{"ATP" : 1},
+						{})
+
 
 #organelles class
 class organelle:
@@ -199,6 +204,14 @@ organelles["Lysosomes"] = organelle("Lysosomes",
 				processes["Agent Digestion"]],
 				{"Protein" : 2, "Fat" : 1})
 
+organelles["Flagella"] = organelle("Flagella", 
+				[processes["Use Energy"]],
+				{"Protein" : 2, "Fat" : 1})
+
+organelles["Pilus"] = organelle("Pilus", 
+				[],
+				{"Protein" : 2, "Fat" : 1})
+
 #create a step function
 #return positive if below low, negative if above high
 def step_function(value, threshold, high_threshold, vent_threshold):
@@ -216,8 +229,29 @@ def step_function(value, threshold, high_threshold, vent_threshold):
 #at the moment it is super simple as this whole concept needs work
 #it should be anti-symmetric so (1,2) = -(2,1) as the flow is the same but opposite
 #it should return a value between 0 and 1 but 1 means transfer ALL compounds per time step
-def compute_predation(species_1_strength, species_2_strength):
-	return base_predation_rate*-1*(species_1_strength - species_2_strength)
+def compute_predation(species_1, species_2):
+	strength_difference = species_1.strength - species_2.strength
+	strength_difference_sign = math.copysign(1, strength_difference)
+	predation = strength_difference_sign*(1 - math.exp(-abs(strength_difference)*predation_scaling))
+	return predation
+
+#this function chooses whether to add or subtract an organelle, it's part of auto-evo
+def add_or_subtract_organelle(species):
+	if random.choice([True, False]):
+		#add an organelle
+		choice = False
+		while 1:
+			choice = random.choice(organelles.keys())
+			if choice != "Nucleus":
+				species.organelles.append(organelles[str(choice)])
+				print " adding ", str(choice)
+				break
+
+	else:
+		#subtract an organelle
+		choice = random.choice(species.organelles)
+		species.organelles.remove(choice)
+		print " removing ", str(choice.name)
 
 
 #species class
@@ -274,7 +308,28 @@ class species:
 		#pick a colour for your species
 		self.colour = [random.randint(0,255), random.randint(0,255), random.randint(0,255)]
 		#set a strength for the species, this needs to be done intelligently
-		self.strength = random.uniform(0,1)
+		self.strength = 0
+		self.compute_fight_strength()
+		#set a speed value for the species
+		self.speed = 0.01
+		self.compute_speed()
+
+	#compute the speed of the species
+	def compute_speed(self):
+		number_of_flagella = 0
+		for organelle in self.organelles:
+			if organelle.name == "Flagella":
+				number_of_flagella += 1 
+		self.speed = float(number_of_flagella)/float(len(self.organelles))
+	
+	#compute the fight strength of the species
+	def compute_fight_strength(self):
+		self.strength = 0
+		for organelle in self.organelles:
+			if organelle.name == "Pilus":
+				self.strength += 1
+			if organelle.name == "Agent Gland":
+				self.strength += 2
 
 	#compute the action of each chemical
 	def compute_action(self):
@@ -433,7 +488,7 @@ class patch:
 				#otherwise add an entry to the matrix
 				else:
 					self.predation_relations[i].append(
-						compute_predation(self.species[i].strength, self.species[j].strength))
+						compute_predation(self.species[i], self.species[j]))
 
 	#move compunds based on the predation relations
 	def run_predation(self):
@@ -539,16 +594,23 @@ class ocean:
 			self.patches.append(copy.deepcopy(self.patches[0]))
 		for i in range(no_of_patches):
 			self.patches[i].number = i
+		#print the current state		
 		#choose a species to be mutated
 		self.species_under_auto_evo = random.randint(0, no_species_per_patch - 1)
 		print "Mutation will be applied to species ", self.species_under_auto_evo
-		print "Patch 0 will be the control where species ", self.species_under_auto_evo,
-		print " has fight strength ", self.patches[0].species[self.species_under_auto_evo].strength
+		print "Patch 0 will be the control where species"
 		for i in range(1,len(self.patches)):
-			self.patches[i].species[self.species_under_auto_evo].strength = random.uniform(0,1)
-			self.patches[i].compute_predation_relations()		
-			print "In patch ", i, " the fight strength has been set to ",
-			print self.patches[i].species[self.species_under_auto_evo].strength
+			print "In patch ", str(i), 
+			add_or_subtract_organelle(self.patches[i].species[self.species_under_auto_evo])
+		for i in range(len(self.patches)):
+			#compute the new attributes of the species which has been altered
+			self.patches[i].species[self.species_under_auto_evo].compute_fight_strength()
+			self.patches[i].species[self.species_under_auto_evo].compute_speed()
+			self.patches[i].species[self.species_under_auto_evo].compute_made_of()
+			self.patches[i].species[self.species_under_auto_evo].compute_surface_area()
+			#compute the new predation relations in the patch
+			self.patches[i].compute_predation_relations()
+
 
 
 
