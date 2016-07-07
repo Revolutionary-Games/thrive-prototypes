@@ -53,7 +53,8 @@ ocean_changes = False #can the species change the ocean_values over time?
 relative_mass_of_ocean = 0.000001 #how fast should the ocean change?
 rate_of_convergence_to_ocean = 0.01 #how fast (from 0 to 1) should the pax mix with the ocean?
 base_predation_rate = 1 #how fast should predation be? << 1
-length_of_sim = 100 #number of steps to advance when you press the space bar
+length_of_sim = 500 #number of steps to advance when you press the space bar
+repetitions_to_do_bettwen_spacebar = 100 #how many times should the sim be repeated?
 predation_scaling = 0.1 #the smaller this number is the less predation will take place
 
 #processes class
@@ -230,29 +231,85 @@ def step_function(value, threshold, high_threshold, vent_threshold):
 #it should be anti-symmetric so (1,2) = -(2,1) as the flow is the same but opposite
 #it should return a value between 0 and 1 but 1 means transfer ALL compounds per time step
 def compute_predation(species_1, species_2):
-	strength_difference = species_1.strength - species_2.strength
+	strength_difference = species_2.strength - species_1.strength
 	strength_difference_sign = math.copysign(1, strength_difference)
 	predation = strength_difference_sign*(1 - math.exp(-abs(strength_difference)*predation_scaling))
 	return predation
 
+#count the number of organelles of a certain type
+def count_organelles(species, name):
+	count = 0
+	for organ in species.organelles:
+		if organ.name == name:
+			count += 1
+	return count
+
+#keep track of which variations have already been tried
+organelles_added = []
+organelles_subtracted = []
+
 #this function chooses whether to add or subtract an organelle, it's part of auto-evo
 def add_or_subtract_organelle(species):
-	if random.choice([True, False]):
+	#keep track of which organelles are already being tested
+	global organelles_added
+	global organelles_subtracted
+	#randomly choose whether to add or subtract
+	#always choose to add if the only organelles remaining are nucleus and cytoplasm
+	#always choose to add if all possible subtractions are already being tried
+	if (random.choice([True, False]) or len(species.organelles) <= 2 or
+		len(species.organelles) - len(organelles_subtracted) <= 2):
 		#add an organelle
 		choice = False
+		fail_counter = 0
 		while 1:
 			choice = random.choice(organelles.keys())
-			if choice != "Nucleus":
+			#you can't add another nucleus
+			if choice != "Nucleus" and choice not in organelles_added:
 				species.organelles.append(organelles[str(choice)])
 				print " adding ", str(choice)
+				organelles_added.append(choice)
+				break
+
+			fail_counter += 1
+			if fail_counter >= 100:
+				print "Failed to add an organelle!"
 				break
 
 	else:
 		#subtract an organelle
-		choice = random.choice(species.organelles)
-		species.organelles.remove(choice)
-		print " removing ", str(choice.name)
+		fail_counter = 0
+		choice = False
+		while 1:
 
+			choice = random.choice(species.organelles)
+			#you can't take away the nucleus
+			if choice != "Nucleus" and choice != "Cytoplasm" and choice not in organelles_subtracted:
+				species.organelles.remove(choice)
+				print " removing ", str(choice.name)
+				organelles_subtracted.append(choice)
+				break
+			#you can only take away cytoplasm if 2 or more remain
+			elif (choice != "Nucleus" and count_organelles(species, "Cytoplasm") >= 2 and
+				choice not in organelles_subtracted):
+					species.organelles.remove(choice)
+					organelles_subtracted.append(choice)
+					print " removing ", str(choice.name)
+					break
+
+			fail_counter += 1
+			if fail_counter >= 100:
+				print "Failed to subtract an organelle!"
+				break
+
+#this function prints the current state of the patch
+def print_current_state(patch):
+	print "Current State: F = Flagella, A = Agents, P = Pilli, T = Total number of organelles:"
+	for specie in patch.species:
+		print "F :", count_organelles(specie, "Flagella"),
+		print " A :", count_organelles(specie, "Agent Gland"),
+		print " P :", count_organelles(specie, "Pilus"),
+		print " T :", len(specie.organelles),
+		print "."
 
 #species class
 class species:
@@ -594,11 +651,17 @@ class ocean:
 			self.patches.append(copy.deepcopy(self.patches[0]))
 		for i in range(no_of_patches):
 			self.patches[i].number = i
-		#print the current state		
+		#print the current state
+		print_current_state(self.patches[0])
+		#reset the list of choices which have already been tried.
+		global organelles_added
+		global organelles_subtracted
+		organelles_added = []
+		organelles_subtracted = []		
 		#choose a species to be mutated
 		self.species_under_auto_evo = random.randint(0, no_species_per_patch - 1)
 		print "Mutation will be applied to species ", self.species_under_auto_evo
-		print "Patch 0 will be the control where species"
+		print "Patch 0 will be the control."
 		for i in range(1,len(self.patches)):
 			print "In patch ", str(i), 
 			add_or_subtract_organelle(self.patches[i].species[self.species_under_auto_evo])
@@ -642,11 +705,11 @@ print "Press SPACE to start."
 def advance():
 	global data
 	reset_data()
-	steps_per_percent = length_of_sim/100
+	steps_per_percent = float(length_of_sim)/100
 	print "Percentage Completed : ",
 	for i in range(length_of_sim):
-		percent_complete = i/steps_per_percent
-		if i % 10*steps_per_percent == 0:
+		percent_complete = float(i)/steps_per_percent
+		if percent_complete % 10 == 0:
 			print percent_complete,
 		#run the world and collect the data to display
 		our_ocean.run_world()
@@ -672,7 +735,8 @@ while running:
 	        if event.key == K_ESCAPE:
 	            running = False
 	        if event.key == K_SPACE:
-	        	advance()
+	        	for i in range(repetitions_to_do_bettwen_spacebar):
+	        		advance()
 
 	
 	clock.tick(60)
