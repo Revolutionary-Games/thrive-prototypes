@@ -51,11 +51,15 @@ smoothing_factor = 0.1 #if the graphs are super spikey then slow down the proces
 global_absorbtion_factor = 1 # slow down absorbtion with this
 ocean_changes = False #can the species change the ocean_values over time?
 relative_mass_of_ocean = 0.000001 #how fast should the ocean change?
-rate_of_convergence_to_ocean = 0.01 #how fast (from 0 to 1) should the pax mix with the ocean?
-base_predation_rate = 1 #how fast should predation be? << 1
-length_of_sim = 500 #number of steps to advance when you press the space bar
-repetitions_to_do_bettwen_spacebar = 100 #how many times should the sim be repeated?
+rate_of_convergence_to_ocean = 0.01 #how fast (from 0 to 1) should the pax mix with the ocean? 
+length_of_sim = 200 #number of steps to advance when you press the space bar
+repetitions_to_do_bettwen_spacebar = 1 #how many times should the sim be repeated?
 predation_scaling = 0.1 #the smaller this number is the less predation will take place
+diagnostics = False #print extra info on what is going on?
+
+#turn on or off different processes
+predation = True
+auto_evo = True
 
 #processes class
 class process:
@@ -283,14 +287,14 @@ def add_or_subtract_organelle(species):
 
 			choice = random.choice(species.organelles)
 			#you can't take away the nucleus
-			if choice != "Nucleus" and choice != "Cytoplasm" and choice not in organelles_subtracted:
+			if choice.name != "Nucleus" and choice.name != "Cytoplasm" and choice.name not in organelles_subtracted:
 				species.organelles.remove(choice)
 				print " removing ", str(choice.name)
-				organelles_subtracted.append(choice)
+				organelles_subtracted.append(choice.name)
 				break
 			#you can only take away cytoplasm if 2 or more remain
-			elif (choice != "Nucleus" and count_organelles(species, "Cytoplasm") >= 2 and
-				choice not in organelles_subtracted):
+			elif (choice.name != "Nucleus" and count_organelles(species, "Cytoplasm") >= 2 and
+				choice.name not in organelles_subtracted):
 					species.organelles.remove(choice)
 					organelles_subtracted.append(choice)
 					print " removing ", str(choice.name)
@@ -303,11 +307,12 @@ def add_or_subtract_organelle(species):
 
 #this function prints the current state of the patch
 def print_current_state(patch):
-	print "Current State: F = Flagella, A = Agents, P = Pilli, T = Total number of organelles:"
+	print "Current State: F = Flagella, A = Agents, P = Pilli, C = Chloroplast, T = Total number of organelles:"
 	for specie in patch.species:
 		print "F :", count_organelles(specie, "Flagella"),
 		print " A :", count_organelles(specie, "Agent Gland"),
 		print " P :", count_organelles(specie, "Pilus"),
+		print " C :", count_organelles(specie, "Chloroplast"),
 		print " T :", len(specie.organelles),
 		print "."
 
@@ -465,9 +470,14 @@ class species:
 
 	#compute the compunds required to make a new member
 	def compute_made_of(self):
+		#reset the values
+		for compound in compounds:
+			self.made_of[str(compound)] = 0
+		#ask each organelle what is made of
 		for organelles in self.organelles:
-			for compounds in organelles.made_of.keys():
-				self.made_of[str(compounds)] += organelles.made_of[str(compounds)]
+			for compound in organelles.made_of.keys():
+				#add this value to the total
+				self.made_of[str(compound)] += organelles.made_of[str(compound)]
 
 	#compute the surface area of the species as a whole
 	def compute_surface_area(self):
@@ -624,7 +634,8 @@ class ocean:
 				species.grow()
 				species.die()
 			#run the predation in the patch
-			patch.run_predation()
+			if predation:
+				patch.run_predation()
 		self.time += 1
 
 	#Auto-evo!
@@ -671,6 +682,12 @@ class ocean:
 			self.patches[i].species[self.species_under_auto_evo].compute_speed()
 			self.patches[i].species[self.species_under_auto_evo].compute_made_of()
 			self.patches[i].species[self.species_under_auto_evo].compute_surface_area()
+			if diagnostics:
+				print "mutated species new values",
+				print "strength :", self.patches[i].species[self.species_under_auto_evo].strength,
+				print "speed :", self.patches[i].species[self.species_under_auto_evo].speed,
+				print "made of :", self.patches[i].species[self.species_under_auto_evo].made_of,
+				print "surface_area :", self.patches[i].species[self.species_under_auto_evo].surface_area
 			#compute the new predation relations in the patch
 			self.patches[i].compute_predation_relations()
 
@@ -691,7 +708,7 @@ def draw_graph(data, max_value, colour = [0,0,255]):
 		new_point = [10 + i*x_scaling, (height - 110) - data[i]*y_scaling]
 		pygame.draw.line(screen, colour, current_point, new_point, 5)
 		current_point = new_point
-	pygame.display.flip()
+
 
 #this is the data which will be drawn
 def reset_data():
@@ -717,12 +734,19 @@ def advance():
 			data[j].append(our_ocean.patches[0].species[j].population)
 	print "done"
 
-	our_ocean.auto_evo()
+	if auto_evo:
+		our_ocean.auto_evo()
+	else:
+		print "Pops :",
+		for i in range(no_species_per_patch):
+			print our_ocean.patches[0].species[i].population,
+		print "."
 
 	#draw the data
 	screen.fill(background_colour)
 	for data_set in data:
 		draw_graph(data_set, max(data_set), colour = [random.randint(0,255), random.randint(0,255), random.randint(0,255)])
+	pygame.display.flip()
 
 #main loop, halt means wait for SPACE to be pressed, running means don't quit
 halt = True
