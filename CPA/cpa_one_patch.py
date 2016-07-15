@@ -52,9 +52,10 @@ global_absorbtion_factor = 1 # slow down absorbtion with this
 ocean_changes = False #can the species change the ocean_values over time?
 relative_mass_of_ocean = 0.000001 #how fast should the ocean change?
 rate_of_convergence_to_ocean = 0.01 #how fast (from 0 to 1) should the pax mix with the ocean? 
-length_of_sim = 200 #number of steps to advance when you press the space bar
-repetitions_to_do_bettwen_spacebar = 1 #how many times should the sim be repeated?
+length_of_sim = 1000 #number of steps to advance when you press the space bar
+repetitions_to_do_bettwen_spacebar = 500 #how many times should the sim be repeated?
 predation_scaling = 0.1 #the smaller this number is the less predation will take place
+speed_scaling = 5 # the smaller this number is the less effective speed is at reducing predation
 diagnostics = False #print extra info on what is going on?
 
 #turn on or off different processes
@@ -234,10 +235,23 @@ def step_function(value, threshold, high_threshold, vent_threshold):
 #at the moment it is super simple as this whole concept needs work
 #it should be anti-symmetric so (1,2) = -(2,1) as the flow is the same but opposite
 #it should return a value between 0 and 1 but 1 means transfer ALL compounds per time step
+#this function should return predation from species_1 to species_2!
 def compute_predation(species_1, species_2):
 	strength_difference = species_2.strength - species_1.strength
 	strength_difference_sign = math.copysign(1, strength_difference)
 	predation = strength_difference_sign*(1 - math.exp(-abs(strength_difference)*predation_scaling))
+	#compute the speed reduction factor
+	#if one of the species is faster it can choose to run rather than fight and get a discount
+	speed_difference = species_2.speed - species_1.speed
+	#the discount should be a value between 0 and 1
+	speed_discount = math.exp(-speed_scaling*abs(speed_difference))
+	#work out whether to apply the discount based on which species is gaining from the predation
+	#case: if compounds are going from 1 -> 2 and 1 is faster
+	if predation >= 0 and speed_difference <= 0:
+		predation *= speed_discount
+	#case: if compounds are going from 2 -> 1 and species 2 is faster
+	elif predation < 0 and speed_difference >= 0:
+		predation *= speed_discount
 	return predation
 
 #count the number of organelles of a certain type
@@ -307,12 +321,16 @@ def add_or_subtract_organelle(species):
 
 #this function prints the current state of the patch
 def print_current_state(patch):
-	print "Current State: F = Flagella, A = Agents, P = Pilli, C = Chloroplast, T = Total number of organelles:"
+	print "Current State: F = Flagella, A = Agents, P = Pilli, C = Chloroplast,",
+	print "Y = Cytoplasm, L = Lysosomes, M = Mitochondria, T = Total number of organelles:"
 	for specie in patch.species:
 		print "F :", count_organelles(specie, "Flagella"),
 		print " A :", count_organelles(specie, "Agent Gland"),
 		print " P :", count_organelles(specie, "Pilus"),
 		print " C :", count_organelles(specie, "Chloroplast"),
+		print " Y :", count_organelles(specie, "Cytoplasm"),
+		print " L :", count_organelles(specie, "Lysosomes"),
+		print " M :", count_organelles(specie, "Mitochondria"),
 		print " T :", len(specie.organelles),
 		print "."
 
