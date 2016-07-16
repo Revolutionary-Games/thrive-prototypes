@@ -53,7 +53,7 @@ ocean_changes = False #can the species change the ocean_values over time?
 relative_mass_of_ocean = 0.000001 #how fast should the ocean change?
 rate_of_convergence_to_ocean = 0.01 #how fast (from 0 to 1) should the pax mix with the ocean? 
 length_of_sim = 1000 #number of steps to advance when you press the space bar
-repetitions_to_do_bettwen_spacebar = 500 #how many times should the sim be repeated?
+repetitions_to_do_bettwen_spacebar = 100 #how many times should the sim be repeated?
 predation_scaling = 0.1 #the smaller this number is the less predation will take place
 speed_scaling = 5 # the smaller this number is the less effective speed is at reducing predation
 diagnostics = False #print extra info on what is going on?
@@ -459,9 +459,7 @@ class species:
 		for compound in compounds:
 			if self.compounds_free_action[str(compound)] > 0:
 				#work out how much you want
-				amount = (self.population*
-							self.surface_area*
-							permeability[str(compound)]*
+				amount = (permeability[str(compound)]*
 							global_absorbtion_factor*
 							self.compounds_free_action[str(compound)])
 
@@ -509,7 +507,7 @@ class species:
 				pop = self.compounds_locked[(str(compound))]/self.made_of[str(compound)]
 		self.population = pop
 		#keep a list of the last 50 values (to smooth out rapid oscillations)
-		self.population_memory.append(pop)
+		self.population_memory.append(sum(self.compounds_locked.values()))
 		if len(self.population_memory) > 50:
 			self.population_memory.pop(0)
 
@@ -527,7 +525,7 @@ class species:
 			possible_pop_increase = 10000
 			#work out which compound is the limiting one
 			if self.made_of[str(compound)] > 0:
-				possible_pop_increase = (self.growth_rate*self.compounds_free[str(compound)]/
+				possible_pop_increase = (float(self.growth_rate*self.compounds_free[str(compound)])/
 						self.made_of[str(compound)])
 			if possible_pop_increase < pop_increase:
 				pop_increase = possible_pop_increase
