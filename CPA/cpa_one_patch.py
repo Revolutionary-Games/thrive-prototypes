@@ -1,24 +1,7 @@
 #prototype for CPA in a single patch
-
-import pygame
 import math
 import random
-from pygame.locals import *
 import copy
-
-#setup, just PYGAME stuff and not required.
-
-background_colour = (255,255,255)
-(width, height) = (1000, 600)
-
-screen = pygame.display.set_mode((width, height))#,pygame.FULLSCREEN)
-screen.fill(background_colour)
-pygame.display.set_caption('One Patch CPA')
-pygame.font.init()
-
-myfont = pygame.font.SysFont("monospace", 20)
-
-clock = pygame.time.Clock()
 
 #Actual simulation
 
@@ -51,9 +34,10 @@ smoothing_factor = 0.1 #if the graphs are super spikey then slow down the proces
 global_absorbtion_factor = 1 # slow down absorbtion with this
 ocean_changes = False #can the species change the ocean_values over time?
 relative_mass_of_ocean = 0.000001 #how fast should the ocean change?
-rate_of_convergence_to_ocean = 0.01 #how fast (from 0 to 1) should the pax mix with the ocean? 
+rate_of_convergence_to_ocean = 0.01 #how fast (from 0 to 1) should the patch mix with the ocean? 
 length_of_sim = 1000 #number of steps to advance when you press the space bar
 repetitions_to_do_bettwen_spacebar = 100 #how many times should the sim be repeated?
+predation_waste = 0.2 #percentage of compounds lost to the environment (between 0 and 1)
 predation_scaling = 0.1 #the smaller this number is the less predation will take place
 speed_scaling = 5 # the smaller this number is the less effective speed is at reducing predation
 diagnostics = False #print extra info on what is going on?
@@ -322,7 +306,8 @@ def add_or_subtract_organelle(species):
 #this function prints the current state of the patch
 def print_current_state(patch):
 	print "Current State: F = Flagella, A = Agents, P = Pilli, C = Chloroplast,",
-	print "Y = Cytoplasm, L = Lysosomes, M = Mitochondria, T = Total number of organelles:"
+	print "Y = Cytoplasm, L = Lysosomes, M = Mitochondria, T = Total number of organelles,",
+	print "O = Population:"
 	for specie in patch.species:
 		print "F :", count_organelles(specie, "Flagella"),
 		print " A :", count_organelles(specie, "Agent Gland"),
@@ -332,6 +317,7 @@ def print_current_state(patch):
 		print " L :", count_organelles(specie, "Lysosomes"),
 		print " M :", count_organelles(specie, "Mitochondria"),
 		print " T :", len(specie.organelles),
+		print " O :", specie.average_population,
 		print "."
 
 #species class
@@ -596,18 +582,25 @@ class patch:
 
 	#take compounds from the prey and give them to the predator
 	def move_compounds(self, i,j,amount):
+
 		for compound in compounds:
 			#you get amount% of their free and locked bins, whose bin it is matters			
 			if amount >= 0:
 				amount_to_move_free = amount*self.species[i].compounds_free[str(compound)]
+				self.species[i].compounds_free[str(compound)] -= amount_to_move_free
+				self.species[j].compounds_free[str(compound)] += (1 - predation_waste)*amount_to_move_free
+				self.compounds[str(compound)] += predation_waste*amount_to_move_free
 				#amount_to_move_locked = amount*self.species[i].compounds_locked[str(compound)]
 			else:
-				amount_to_move_free = amount*self.species[j].compounds_free[str(compound)]
+				amount_to_move_free = -amount*self.species[j].compounds_free[str(compound)]
+				self.species[j].compounds_free[str(compound)] -= amount_to_move_free
+				self.species[i].compounds_free[str(compound)] += amount_to_move_free
+				self.compounds[str(compound)] += predation_waste*amount_to_move_free
 				#amount_to_move_locked = amount*self.species[j].compounds_locked[str(compound)]
 			#do it for compounds free
-			amount_to_move = amount*self.species[i].compounds_free[str(compound)]
-			self.species[i].compounds_free[str(compound)] -= amount_to_move_free
-			self.species[j].compounds_free[str(compound)] += amount_to_move_free
+			#self.species[i].compounds_free[str(compound)] -= amount_to_move_free
+			#self.species[j].compounds_free[str(compound)] += amount_to_move_free
+			#self.compounds[str(compound)] += predation_waste*amount_to_move_free
 			#and compounds locked
 			#amount_to_move = amount*self.species[i].compounds_locked[str(compound)]
 			#self.species[i].compounds_locked[str(compound)] -= amount_to_move_locked
@@ -662,7 +655,8 @@ class ocean:
 		print "The resulting populations are : "
 		for i in range(len(self.patches)):
 			#tell the species to compute it's average population over the last 50 steps
-			self.patches[i].species[self.species_under_auto_evo].compute_average_population()
+			for specie in self.patches[i].species:
+				specie.compute_average_population()
 			print " ", i, ":", self.patches[i].species[self.species_under_auto_evo].average_population,
 			#if that pop is greater than the current best then make it the current best
 			if self.patches[i].species[self.species_under_auto_evo].average_population >= max_pop:
@@ -712,19 +706,6 @@ class ocean:
 
 our_ocean = ocean()
 
-#Back to pygame stuff for displaying the data
-#draw a graph of a string of data
-def draw_graph(data, max_value, colour = [0,0,255]):
-	pygame.draw.line(screen, [255,0,0], [10, height - 110], [width - 150, height - 110], 5)
-	pygame.draw.line(screen, [255,0,0], [10, height - 110], [10, 100], 5)
-	y_scaling = float(height - 210)/max_value
-	x_scaling = float(width-180)/len(data)
-	current_point = [10,(height - 110) - data[0]*y_scaling]
-	for i in range(len(data)):
-		new_point = [10 + i*x_scaling, (height - 110) - data[i]*y_scaling]
-		pygame.draw.line(screen, colour, current_point, new_point, 5)
-		current_point = new_point
-
 
 #this is the data which will be drawn
 def reset_data():
@@ -733,7 +714,7 @@ def reset_data():
 	for i in range(no_species_per_patch):
 		data.append([])
 reset_data()
-print "Press SPACE to start."
+
 #what to do when space is pressed and the simulation is advanced 
 def advance():
 	global data
@@ -758,27 +739,6 @@ def advance():
 			print our_ocean.patches[0].species[i].population,
 		print "."
 
-	#draw the data
-	screen.fill(background_colour)
-	for data_set in data:
-		draw_graph(data_set, max(data_set), colour = [random.randint(0,255), random.randint(0,255), random.randint(0,255)])
-	pygame.display.flip()
-
-#main loop, halt means wait for SPACE to be pressed, running means don't quit
-halt = True
-running = True
-while running:
-	for event in pygame.event.get():
-	    if event.type == pygame.QUIT:
-	        running = False
-	    elif event.type == KEYDOWN:
-	        if event.key == K_ESCAPE:
-	            running = False
-	        if event.key == K_SPACE:
-	        	for i in range(repetitions_to_do_bettwen_spacebar):
-	        		advance()
-
-	
-	clock.tick(60)
-
-pygame.quit()
+#main loop, will start immediately
+for i in range(repetitions_to_do_bettwen_spacebar):
+	advance()
