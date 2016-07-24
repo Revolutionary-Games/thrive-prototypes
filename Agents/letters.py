@@ -115,8 +115,8 @@ def compute_best_codes_brute_force(species):
 			print time
 
 	return sorted(top_codes, key=lambda x: x[1], reverse = True)
-
-print "Brute force computation vs Jeff : ", compute_best_codes_brute_force(jeff)
+#brute force computation is slow, to see that uncomment this line!
+#print "Brute force computation vs Jeff : ", compute_best_codes_brute_force(jeff)
 
 #construct the most effective sequence
 def compute_best_codes_by_construction(list_of_species):
@@ -139,7 +139,13 @@ def compute_best_codes_by_construction(list_of_species):
 				if species.codes[key][i] == letters[3]:
 					current_scores[3] += multipler
 		#use the scores to determine the best letter
-		best_letter = current_scores.index(max(current_scores))
+		high_score = 0
+		letters_to_check = [0,1,2,3]
+		random.shuffle(letters_to_check)
+		for index in letters_to_check:
+			if current_scores[index] > high_score:
+				high_score = current_scores[index]
+				best_letter = index
 		output.append(letters[best_letter])
 	return "".join(output)
 
