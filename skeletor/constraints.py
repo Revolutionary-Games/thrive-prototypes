@@ -54,8 +54,13 @@ class Verlet:
         if distance >= edge.thickness:
             return
         delta = (edge.thickness - distance) * edge.softness
-        self.x -= delta * disp[0]
-        self.y -= delta * disp[1]
+        self.x -= delta * disp[0] * 0.5
+        self.y -= delta * disp[1] * 0.5
+
+        edge.v1.x += delta * disp[0] * 0.25
+        edge.v1.y += delta * disp[1] * 0.25
+        edge.v2.x += delta * disp[0] * 0.25
+        edge.v2.y += delta * disp[1] * 0.25
 
 
 
@@ -77,7 +82,7 @@ class Edge:
         dy = (self.v1.y - self.v2.y) * scale * self.elasticity * 0.5
 
         self.v1.x -= dx
-        self.v2.x += dx
+        self.v2.x += dx 
 
         self.v1.y -= dy
         self.v2.y += dy
@@ -85,7 +90,7 @@ class Edge:
 
 
 verlets = [Verlet(scrdim[0]/2 + i, scrdim[1]/2 + i + 1) for i in xrange(16)]
-edges = [Edge(verlets[i], verlets[i/2], 50, 2) for i in xrange(1, 16)]
+edges = [Edge(verlets[i], verlets[i/2], 50, 5) for i in xrange(1, 16)]
 
 pygame.init()
 screen = pygame.display.set_mode(scrdim)
@@ -102,8 +107,8 @@ active_pt = [None]
 
 run = True
 while run:  
-    screen_x = sum([v.x for v in verlets]) / float(len(verlets)) - scrdim[0] / 2
-    screen_y = sum([v.y for v in verlets]) / float(len(verlets)) - scrdim[1] / 2
+    screen_x = 0#sum([v.x for v in verlets]) / float(len(verlets)) - scrdim[0] / 2
+    screen_y = 0#sum([v.y for v in verlets]) / float(len(verlets)) - scrdim[1] / 2
 
     time_passed = clock.tick(60)
     events = pygame.event.get()
