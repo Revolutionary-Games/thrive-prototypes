@@ -34,7 +34,7 @@ smoothing_factor = 0.1 #if the graphs are super spikey then slow down the proces
 global_absorbtion_factor = 1 # slow down absorbtion with this
 ocean_changes = False #can the species change the ocean_values over time?
 relative_mass_of_ocean = 0.000001 #how fast should the ocean change?
-rate_of_convergence_to_ocean = 0.01 #how fast (from 0 to 1) should the patch mix with the ocean? 
+rate_of_convergence_to_ocean = 1 #0.01 #how fast (from 0 to 1) should the patch mix with the ocean? 
 length_of_sim = 1000 #number of steps to advance when you press the space bar
 repetitions_to_do_bettwen_spacebar = 100 #how many times should the sim be repeated?
 predation_waste = 0.2 #percentage of compounds lost to the environment (between 0 and 1)
@@ -143,12 +143,14 @@ processes["Use Energy"] = process("Use Energy",
 
 #organelles class
 class organelle:
-	def __init__(self, name, processes, made_of):
+	def __init__(self, name, processes, made_of, maintenance = 0.12):
 		self.name = name
 		#what processes the organelle can do
 		self.processes = processes
 		#what the organelle is made of 
 		self.made_of = made_of
+		#cost to maintain per tick, in ATP
+		self.maintenance = maintenance
 
 #all the organelles
 organelles = {}
@@ -196,7 +198,7 @@ organelles["Lysosomes"] = organelle("Lysosomes",
 
 organelles["Flagella"] = organelle("Flagella", 
 				[processes["Use Energy"]],
-				{"Protein" : 2, "Fat" : 1})
+				{"Protein" : 2, "Fat" : 1}, 0.56)
 
 organelles["Pilus"] = organelle("Pilus", 
 				[],
@@ -209,7 +211,7 @@ def step_function(value, threshold, high_threshold, vent_threshold):
 		return -float(value - high_threshold)/(vent_threshold - high_threshold)
 	elif value >= threshold:
 		return 0
-	elif value < threshold and threshold != 0 and value >= 0:
+	elif threshold != 0 and value >= 0:
 		return 1 - (float(value)/threshold)
 	else:
 		print "error in step function, I was passed a negative value"
@@ -504,6 +506,12 @@ class species:
 		else:
 			print "Error: Population_Memory is length 0!"
 
+	def maintenance(self):
+		maintenance = 0
+		for organelle in self.organelles:
+			maintenance += organelle.maintenance
+		self.compounds_free["ATP"] *= math.e ** -maintenance
+
 	#grow new members of the species by moving compounds free -> locked bins
 	def grow(self):
 		pop_increase = 10000
@@ -638,6 +646,7 @@ class ocean:
 			#for each species run their different processes
 			for species in patch.species:
 				species.vent()
+				species.maintenance()
 				species.run_organelles()
 				species.absorb()
 				species.grow()
