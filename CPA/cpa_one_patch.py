@@ -489,10 +489,14 @@ class species:
 
 	#compute the size of the population of the species
 	def compute_population(self):
-		pop = 0
+		pop = -1
 		for compound in compounds:
 			if self.made_of[str(compound)] > 0:
-				pop = self.compounds_locked[(str(compound))]/self.made_of[str(compound)]
+				if pop == -1:
+					pop = self.compounds_locked[(str(compound))]/self.made_of[str(compound)]
+				else:
+					pop = min(pop, self.compounds_locked[(str(compound))]/self.made_of[str(compound)])
+
 		self.population = pop
 		#keep a list of the last 50 values (to smooth out rapid oscillations)
 		self.population_memory.append(sum(self.compounds_locked.values()))
