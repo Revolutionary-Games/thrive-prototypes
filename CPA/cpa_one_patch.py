@@ -42,6 +42,8 @@ predation_scaling = 0.1 #the smaller this number is the less predation will take
 speed_scaling = 5 # the smaller this number is the less effective speed is at reducing predation
 diagnostics = False #print extra info on what is going on?
 
+LYSOSOME_RATE = 0.6
+
 #turn on or off different processes
 predation = True
 auto_evo = True
@@ -354,9 +356,11 @@ class species:
 		#thresholds are the levels at which you are happy with the amount of that compound
 		self.compounds_free_thresholds = {}
 		self.compounds_locked = {}
+		self.compounds_food = {}
 		for compound in compounds:
 			self.compounds_free[str(compound)] = random.randint(5,25)
 			self.compounds_locked[str(compound)] = 100
+			self.compounds_food[str(compound)] = 0
 			#[level at which less is too low, level at which more is too high, vent level]
 			self.compounds_free_thresholds[str(compound)] = [10,20,30]
 		#setup the cell wall, permeability 0 means no transport, 1 means total transport
@@ -402,8 +406,8 @@ class species:
 	#compute the action of each chemical
 	def compute_action(self):
 		for compound in compounds:
-			self.compounds_free_action[str(compound)] = step_function(self.compounds_free[str(compound)], 
-				self.compounds_free_thresholds[str(compound)][0], 
+			self.compounds_free_action[str(compound)] = step_function(self.compounds_free[str(compound)],
+				self.compounds_free_thresholds[str(compound)][0],
 				self.compounds_free_thresholds[str(compound)][1],
 				self.compounds_free_thresholds[str(compound)][2])
 
@@ -412,6 +416,19 @@ class species:
 		#work out where the value is relative the thresholds for that compound
 		self.compute_action()
 		for organelle in self.organelles:
+			if organelle.name == "Lysosomes":
+				for process in organelle.processes:
+					# Lysosome will always try to process as much as it can
+					c0 = process.inputs.keys()[0]
+					rate = self.compounds_food[str(c0)]/ process.inputs[c0]
+					for inputs in process.inputs.keys():
+						rate = min(rate, self.compounds_food[str(inputs)] / process.inputs[inputs])
+					rate *= LYSOSOME_RATE
+					for compounds in process.inputs.keys():
+						self.compounds_food[str(compounds)] -= rate*process.inputs[str(compounds)]
+					for compounds in process.outputs.keys():
+						self.compounds_free[str(compounds)] += rate*process.outputs[str(compounds)]
+				continue
 			for process in organelle.processes:
 				#calculate the process rate
 				input_rate = -1
@@ -514,7 +531,16 @@ class species:
 		maintenance = 0
 		for organelle in self.organelles:
 			maintenance += organelle.maintenance
-		self.compounds_free["ATP"] *= math.e ** -maintenance
+		self.compounds_free["ATP"] -=  self.population * maintenance
+		if self.compounds_free["ATP"] < 0: self.compounds_free["ATP"] = 0
+
+	def recalculate_free_thresholds(self):
+		for compound in compounds:
+			self.compounds_free_thresholds[str(compound)] = [
+				10 * self.population * len(self.organelles),
+				20 * self.population * len(self.organelles),
+				30 * self.population * len(self.organelles)
+			]
 
 	#grow new members of the species by moving compounds free -> locked bins
 	def grow(self):
@@ -600,13 +626,13 @@ class patch:
 			if amount >= 0:
 				amount_to_move_free = amount*self.species[i].compounds_free[str(compound)]
 				self.species[i].compounds_free[str(compound)] -= amount_to_move_free
-				self.species[j].compounds_free[str(compound)] += (1 - predation_waste)*amount_to_move_free
+				self.species[j].compounds_food[str(compound)] += (1 - predation_waste)*amount_to_move_free
 				self.compounds[str(compound)] += predation_waste*amount_to_move_free
 				#amount_to_move_locked = amount*self.species[i].compounds_locked[str(compound)]
 			else:
 				amount_to_move_free = -amount*self.species[j].compounds_free[str(compound)]
 				self.species[j].compounds_free[str(compound)] -= amount_to_move_free
-				self.species[i].compounds_free[str(compound)] += amount_to_move_free
+				self.species[i].compounds_food[str(compound)] += amount_to_move_free * (1 - predation_waste)
 				self.compounds[str(compound)] += predation_waste*amount_to_move_free
 				#amount_to_move_locked = amount*self.species[j].compounds_locked[str(compound)]
 			#do it for compounds free
@@ -655,6 +681,7 @@ class ocean:
 				species.absorb()
 				species.grow()
 				species.die()
+				species.recalculate_free_thresholds()
 			#run the predation in the patch
 			if predation:
 				patch.run_predation()
