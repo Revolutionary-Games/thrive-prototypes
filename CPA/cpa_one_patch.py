@@ -31,16 +31,17 @@ no_of_patches = 5
 lower_organelles_per_species = 5
 upper_organelles_per_species = 20
 smoothing_factor = 0.1 #if the graphs are super spikey then slow down the processes with this
-global_absorbtion_factor = 1 # slow down absorbtion with this
+global_absorbtion_factor = 100 # slow down absorbtion with this
 ocean_changes = False #can the species change the ocean_values over time?
 relative_mass_of_ocean = 0.000001 #how fast should the ocean change?
-rate_of_convergence_to_ocean = 0.01 #how fast (from 0 to 1) should the patch mix with the ocean? 
-length_of_sim = 1000 #number of steps to advance when you press the space bar
-repetitions_to_do_bettwen_spacebar = 100 #how many times should the sim be repeated?
+rate_of_convergence_to_ocean = 1 #how fast (from 0 to 1) should the patch mix with the ocean? 
+length_of_sim = 2000 #number of steps to advance when you press the space bar
+repetitions_to_do_bettwen_spacebar = 400 #how many times should the sim be repeated?
 predation_waste = 0.2 #percentage of compounds lost to the environment (between 0 and 1)
-predation_scaling = 0.1 #the smaller this number is the less predation will take place
+predation_scaling = 0.01 #the smaller this number is the less predation will take place
 speed_scaling = 5 # the smaller this number is the less effective speed is at reducing predation
 diagnostics = False #print extra info on what is going on?
+diagnostics_2 = False #print info on every process run!
 
 LYSOSOME_RATE = 0.6
 
@@ -138,10 +139,6 @@ processes["Denitrification"] = process("Denitrification",
 						{"Ammonia" : 2,},
 						{"Nitrogen" : 2, "ATP" : 10})
 
-processes["Use Energy"] = process("Use Energy",
-						{"ATP" : 1},
-						{})
-
 
 #organelles class
 class organelle:
@@ -151,7 +148,6 @@ class organelle:
 		self.processes = processes
 		#what the organelle is made of 
 		self.made_of = made_of
-		#cost to maintain per tick, in ATP
 		self.maintenance = maintenance
 
 #all the organelles
@@ -189,7 +185,7 @@ organelles["Nucleus"] = organelle("Nucleus",
 				[processes["Nucleotide Synthesis"],
 				processes["DNA Synthesis"],
 				processes["Protein Synthesis"]],
-				{"Protein" : 2, "Fat" : 1, "DNA" : 10})
+				{"Protein" : 2, "Fat" : 1, "DNA" : 1})
 
 organelles["Lysosomes"] = organelle("Lysosomes", 
 				[processes["Protein Digestion"],
@@ -199,8 +195,9 @@ organelles["Lysosomes"] = organelle("Lysosomes",
 				{"Protein" : 2, "Fat" : 1})
 
 organelles["Flagella"] = organelle("Flagella", 
-				[processes["Use Energy"]],
-				{"Protein" : 2, "Fat" : 1}, 0.56)
+				[],
+				{"Protein" : 2, "Fat" : 1},
+				0.48)
 
 organelles["Pilus"] = organelle("Pilus", 
 				[],
@@ -213,7 +210,7 @@ def step_function(value, threshold, high_threshold, vent_threshold):
 		return -float(value - high_threshold)/(vent_threshold - high_threshold)
 	elif value >= threshold:
 		return 0
-	elif threshold != 0 and value >= 0:
+	elif value < threshold and threshold != 0 and value >= 0:
 		return 1 - (float(value)/threshold)
 	else:
 		print "error in step function, I was passed a negative value"
@@ -339,16 +336,19 @@ class species:
 		self.number = number
 		#what organelles does that species have
 		self.organelles = []
-		#the minimum viable species has Nuleus + Cytoplasm
-		self.organelles.append(organelles["Nucleus"])
-		self.organelles.append(organelles["Cytoplasm"])
+		self.organelles_old = [] #a list of the organelles a species had before the last autoevo
 		#add organelles to the species, make sure there is only 1 nucleus
-		number_of_organelles = random.randint(lower_organelles_per_species, upper_organelles_per_species)
+		number_of_organelles = 0#random.randint(lower_organelles_per_species, upper_organelles_per_species)
 		while number_of_organelles > 0:
 			choice = random.choice(organelles.keys())
 			if choice != "Nucleus":
 				self.organelles.append(organelles[str(choice)])
 				number_of_organelles -= 1
+		#the minimum viable species has Nuleus + Cytoplasm
+		self.organelles.append(organelles["Chloroplast"])
+		self.organelles.append(organelles["Cytoplasm"])
+		self.organelles.append(organelles["Nucleus"])
+		self.organelles_old = self.organelles[:]
 		#setup the compounds bins
 		self.compounds_free = {}
 		#action is between -1 and 1 and is how much you want to increase that compound
@@ -356,26 +356,31 @@ class species:
 		#thresholds are the levels at which you are happy with the amount of that compound
 		self.compounds_free_thresholds = {}
 		self.compounds_locked = {}
+		self.compounds_locked_old = {}
 		self.compounds_food = {}
 		for compound in compounds:
 			self.compounds_free[str(compound)] = random.randint(5,25)
 			self.compounds_locked[str(compound)] = 100
 			self.compounds_food[str(compound)] = 0
+			self.compounds_locked_old[str(compound)] = 0
 			#[level at which less is too low, level at which more is too high, vent level]
 			self.compounds_free_thresholds[str(compound)] = [10,20,30]
 		#setup the cell wall, permeability 0 means no transport, 1 means total transport
 		self.permeability = permeability
 		#rate at which the species dies a non-predation death
-		self.death_rate = 0.05
+		self.death_rate = 0.00001
 		#rate at which free compounds are stored as compounds locked and the species grows
-		self.growth_rate = 0.1
+		self.growth_rate = 0.5
 		#what is the cell made of? (sum of what the organelles are made of)
 		self.made_of = {}
+		self.made_of_old = {}
 		for compound in compounds:
 			self.made_of[str(compound)] = 0
+			self.made_of_old[str(compound)] = 0
+		self.compute_made_of()
 		self.compute_made_of()
 		#set surface area
-		self.surface_area = 50
+		self.surface_area = 0
 		self.compute_surface_area()
 		#pick a colour for your species
 		self.colour = [random.randint(0,255), random.randint(0,255), random.randint(0,255)]
@@ -383,7 +388,7 @@ class species:
 		self.strength = 0
 		self.compute_fight_strength()
 		#set a speed value for the species
-		self.speed = 0.01
+		self.speed = 0
 		self.compute_speed()
 
 	#compute the speed of the species
@@ -442,22 +447,37 @@ class species:
 						output_rate = self.compounds_free_action[str(outputs)]
 
 				#determine how much to act, do nothing if they are both equally far from their optimals
-				rate = smoothing_factor*max(output_rate - input_rate,0)
+				rate = smoothing_factor*max(output_rate - input_rate,0)*self.population
 				#print any errors
-				if rate > 1:
-					print "rate = ", rate
+				#if rate > 1:
+				#	print "rate = ", rate
 
 				#check there are enough inputs
-				will_run = True
-				for compounds in process.inputs.keys():
-					if rate*process.inputs[str(compounds)] >= self.compounds_free[str(compounds)]:
-						will_run = False
+				if self.number is 0 and self.patch.number is 0 and diagnostics_2:
+					print process.name, "Wanted", rate,
+				will_run = False
+				counter = 0
+				while not will_run and counter <= 1000:
+					passed_tests = True
+					for compounds in process.inputs.keys():
+						if rate*process.inputs[str(compounds)] >= self.compounds_free[str(compounds)]:
+							passed_tests = False
+					if passed_tests:
+						will_run = True
+					counter += 1
+					rate *= 0.9
 				#run the process
 				if will_run:
 					for compounds in process.inputs.keys():
 						self.compounds_free[str(compounds)] -= rate*process.inputs[str(compounds)]
 					for compounds in process.outputs.keys():
 						self.compounds_free[str(compounds)] += rate*process.outputs[str(compounds)]
+
+				#print diagnostics for this process
+				if self.number is 0 and self.patch.number is 0 and diagnostics_2:
+					print "got", rate
+		if self.number is 0 and self.patch.number is 0 and diagnostics_2:
+			print self.compounds_free
 
 	#absorb compounds from the environment 
 	def absorb(self):
@@ -468,7 +488,7 @@ class species:
 							global_absorbtion_factor*
 							self.compounds_free_action[str(compound)])
 
-				#take it if you can, otherwise get half of what there is availble
+				#take it if you can, otherwise get half of what there is available
 				if self.patch.compounds[str(compound)] <= amount:
 					amount = 0.5*self.patch.compounds[str(compound)]
 
@@ -491,6 +511,8 @@ class species:
 
 	#compute the compunds required to make a new member
 	def compute_made_of(self):
+		#store the current values in the old list
+		self.made_of_old = dict(self.made_of)
 		#reset the values
 		for compound in compounds:
 			self.made_of[str(compound)] = 0
@@ -506,19 +528,20 @@ class species:
 
 	#compute the size of the population of the species
 	def compute_population(self):
-		pop = -1
+		pop = 0
+		pop_old = 0
 		for compound in compounds:
 			if self.made_of[str(compound)] > 0:
-				if pop == -1:
-					pop = self.compounds_locked[(str(compound))]/self.made_of[str(compound)]
-				else:
-					pop = min(pop, self.compounds_locked[(str(compound))]/self.made_of[str(compound)])
-
-		self.population = pop
+				pop = self.compounds_locked[(str(compound))]/self.made_of[str(compound)]
+			if self.made_of_old[str(compound)] > 0:
+				pop_old = self.compounds_locked_old[(str(compound))]/self.made_of_old[str(compound)]
+		self.population = pop + pop_old
 		#keep a list of the last 50 values (to smooth out rapid oscillations)
-		self.population_memory.append(sum(self.compounds_locked.values()))
+		self.population_memory.append(self.population)
 		if len(self.population_memory) > 50:
 			self.population_memory.pop(0)
+		if self.number == 0 and diagnostics:
+			print "Old and new Populations for species number : ", self.number, "pop", pop, "pop_old ", pop_old, "tot", self.population
 
 	#work out the average population over the last 50 steps
 	def compute_average_population(self):
@@ -537,9 +560,9 @@ class species:
 	def recalculate_free_thresholds(self):
 		for compound in compounds:
 			self.compounds_free_thresholds[str(compound)] = [
-				10 * self.population * len(self.organelles),
-				20 * self.population * len(self.organelles),
-				30 * self.population * len(self.organelles)
+				10 * (1 + self.population * len(self.organelles)),
+				20 * (1 + self.population * len(self.organelles)),
+				30 * (1 + self.population * len(self.organelles))
 			]
 
 	#grow new members of the species by moving compounds free -> locked bins
@@ -560,12 +583,17 @@ class species:
 
 	def die(self):
 		#some of your species die, that means losing compounds to the environment
-		for compounds in self.compounds_locked.keys():
+		for compound in compounds:
 			#work out death rate
-			amount_to_lose = self.death_rate*self.compounds_locked[str(compounds)]
+			amount_to_lose = self.death_rate*self.compounds_locked[str(compound)]
 			#drop compounds
-			self.compounds_locked[str(compounds)] -= amount_to_lose
-			self.patch.compounds[str(compounds)] += amount_to_lose
+			self.compounds_locked[str(compound)] -= amount_to_lose
+			self.patch.compounds[str(compound)] += amount_to_lose
+			#work out death rate
+			amount_to_lose = self.death_rate*self.compounds_locked_old[str(compound)]
+			#drop compounds
+			self.compounds_locked_old[str(compound)] -= amount_to_lose
+			self.patch.compounds[str(compound)] += amount_to_lose
 		self.compute_population()
 
 
@@ -675,8 +703,8 @@ class ocean:
 			patch.move_to_optimal()
 			#for each species run their different processes
 			for species in patch.species:
-				species.vent()
 				species.maintenance()
+				species.vent()
 				species.run_organelles()
 				species.absorb()
 				species.grow()
@@ -708,6 +736,19 @@ class ocean:
 		new_patches = []
 		new_patches.append(self.patches[best_version])
 		self.patches = new_patches
+		#switch the current blueprint to the old blueprint, switch the locked bin to old locked bin
+		for specie in self.patches[0].species:
+			#first empty the old compounds locked bin
+			for compound in compounds:
+				amount = specie.compounds_locked_old[str(compound)]
+				specie.compounds_locked_old[str(compound)] -= amount
+				self.patches[0].compounds[str(compound)] += amount
+			#then move the current locked into the old locked array
+			specie.compounds_locked_old = dict(specie.compounds_locked)
+			#then zero the compounds locked
+			for compound in compounds:
+				specie.compounds_locked[str(compound)] = 0
+		#copy the patch 5 times for new mutations to be tested
 		for i in range(no_of_patches - 1):
 			self.patches.append(copy.deepcopy(self.patches[0]))
 		for i in range(no_of_patches):
@@ -781,4 +822,6 @@ def advance():
 
 #main loop, will start immediately
 for i in range(repetitions_to_do_bettwen_spacebar):
+	print ""
+	print "Doing step ", i
 	advance()
