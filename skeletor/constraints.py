@@ -89,8 +89,12 @@ class Edge:
 
 
 
-verlets = [Verlet(scrdim[0]/2 + i, scrdim[1]/2 + i + 1) for i in xrange(16)]
-edges = [Edge(verlets[i], verlets[i/2], 50, 5) for i in xrange(1, 16)]
+verlets = [Verlet(scrdim[0]/2 + (i % 4) * 20, scrdim[1]/2 + (i / 4) * 20) for i in xrange(16)]
+edges = [Edge(verlets[i], verlets[i-4], 50, 2) for i in xrange(4, 16)]
+edges.extend([Edge(verlets[i], verlets[i-1], 50, 2) for i in xrange(16) if i % 4])
+edges.extend([Edge(verlets[i], verlets[i+3], 50 * 2 ** 0.5, 2) for i in xrange(12) if i % 4])
+edges.extend([Edge(verlets[i], verlets[i+5], 50 * 2 ** 0.5, 2) for i in xrange(12) if (i+1) % 4])
+
 
 pygame.init()
 screen = pygame.display.set_mode(scrdim)
