@@ -554,6 +554,7 @@ class species:
 		maintenance = 0
 		for organelle in self.organelles:
 			maintenance += organelle.maintenance
+		maintenance /= len(self.organelles)
 		self.compounds_free["ATP"] -=  self.population * maintenance
 		if self.compounds_free["ATP"] < 0: self.compounds_free["ATP"] = 0
 
