@@ -422,6 +422,7 @@ class species:
 		self.compute_action()
 		for organelle in self.organelles:
 			if organelle.name == "Lysosomes":
+				ctemp = [c for c in compounds]
 				for process in organelle.processes:
 					# Lysosome will always try to process as much as it can
 					c0 = process.inputs.keys()[0]
@@ -430,9 +431,14 @@ class species:
 						rate = min(rate, self.compounds_food[str(inputs)] / process.inputs[inputs])
 					rate *= LYSOSOME_RATE
 					for compounds in process.inputs.keys():
+						ctemp.remove(compunds)
 						self.compounds_food[str(compounds)] -= rate*process.inputs[str(compounds)]
 					for compounds in process.outputs.keys():
 						self.compounds_free[str(compounds)] += rate*process.outputs[str(compounds)]
+				for c in ctemp:
+					amt = self.compounds_food[c]
+					self.compounds_food[c] = 0
+					self.compounds_free[c] += amt
 				continue
 			for process in organelle.processes:
 				#calculate the process rate
