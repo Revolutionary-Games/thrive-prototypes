@@ -207,8 +207,8 @@ while run:
             edges[i].edgeCollision(edges[j])
     for v in verlets:
         v.move()
-        for e in edges:
-            v.edgeCollision(e)
+        # for e in edges:
+            # v.edgeCollision(e)
     if active_pt[0] is not None:
         p = pygame.mouse.get_pos()
         active_pt[0].pos.x += ((p[0] - screen_x) - active_pt[0].pos.x) * 0.3
