@@ -102,6 +102,7 @@ class Verlet:
         self.edges = []
     def move(self, friction = 0.98):
         d = self.pos - self.prev
+        d.y += 1
         self.prev = Vec3(self.pos)
         self.pos += d * friction
     def edgeCollision(self, edge):
@@ -169,15 +170,29 @@ class PlaneConstraint:
     def constrain(self, v):
         if not self.above(v.pos):
             v.pos = self.project(v.pos)
+            v.prev = v.pos
 
 verlets = [Verlet(scrdim[0]/2 + (i % 4) * 50, scrdim[1]/2 + (i / 4) * 50, i) for i in xrange(16)]
-edges = [Edge(verlets[i] , verlets[i/2], 50, 2) for i in xrange(1, 16)]
+edges = [Edge(verlets[i] , verlets[i/2], 140, 2) for i in xrange(1, 16)]
 planes = [PlaneConstraint(Vec3(0, 600, 0), Vec3(0, -1, 0))]
 
 # edges = [Edge(verlets[i], verlets[i-4], 50, 2) for i in xrange(4, 16)]
 # edges.extend([Edge(verlets[i], verlets[i-1], 50, 2) for i in xrange(16) if i % 4])
 # edges.extend([Edge(verlets[i], verlets[i+3], 50 * 2 ** 0.5, 2) for i in xrange(12) if i % 4])
 # edges.extend([Edge(verlets[i], verlets[i+5], 50 * 2 ** 0.5, 2) for i in xrange(12) if (i+1) % 4])
+
+v2 = [Verlet(scrdim[0]/2 + (i % 4) * 50, scrdim[1]/2 + (i / 4) * 50, i) for i in xrange(4)]
+e2 = [
+    Edge(v2[0] , v2[1], 140, 2),
+    Edge(v2[0] , v2[2], 140, 2),
+    Edge(v2[0] , v2[3], 140, 2),
+    Edge(v2[1] , v2[2], 140, 2),
+    Edge(v2[1] , v2[3], 140, 2),
+    Edge(v2[2] , v2[3], 140, 2),
+]
+
+verlets.extend(v2)
+edges.extend(e2)
 
 
 pygame.init()
