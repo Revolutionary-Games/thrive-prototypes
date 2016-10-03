@@ -158,9 +158,21 @@ class Edge:
         other.v1.pos += delta * disp * 0.25
         other.v2.pos += delta * disp * 0.25
 
+class PlaneConstraint:
+    def __init__(self, p, n):
+        self.pos = p
+        self.normal = n / n.length()
+    def project(self, p):
+        return p - (p - self.pos).proj(self.normal)
+    def above(self, p):
+        return (p - self.pos).proj(self.normal) * self.normal > -EPSILON
+    def constrain(self, v):
+        if not self.above(v.pos):
+            v.pos = self.project(v.pos)
 
 verlets = [Verlet(scrdim[0]/2 + (i % 4) * 50, scrdim[1]/2 + (i / 4) * 50, i) for i in xrange(16)]
 edges = [Edge(verlets[i] , verlets[i/2], 50, 2) for i in xrange(1, 16)]
+planes = [PlaneConstraint(Vec3(0, 600, 0), Vec3(0, -1, 0))]
 
 # edges = [Edge(verlets[i], verlets[i-4], 50, 2) for i in xrange(4, 16)]
 # edges.extend([Edge(verlets[i], verlets[i-1], 50, 2) for i in xrange(16) if i % 4])
@@ -182,7 +194,7 @@ clock = pygame.time.Clock()
 active_pt = [None]
 
 run = True
-while run:  
+while run:
     screen_x = 0#sum([v.x for v in verlets]) / float(len(verlets)) - scrdim[0] / 2
     screen_y = 0#sum([v.y for v in verlets]) / float(len(verlets)) - scrdim[1] / 2
 
@@ -207,6 +219,8 @@ while run:
             edges[i].edgeCollision(edges[j])
     for v in verlets:
         v.move()
+        for p in planes:
+            p.constrain(v)
         # for e in edges:
             # v.edgeCollision(e)
     if active_pt[0] is not None:
