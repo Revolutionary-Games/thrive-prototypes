@@ -8,7 +8,7 @@ from pygame.locals import *
 
 EPSILON = 0.000001
 
-scrdim = (1000,700)
+scrdim = (1200,1000)
 
 class Vec3:
     def __init__(self, x=0, y=0, z=0):
@@ -60,10 +60,27 @@ def p2ls(p, p0, p1):
 # given line segment p defined by points p0, p1
 # and line segment q defined by points q0, q1
 # return shortest vector from point on p to a point on q
-def ls2ls(p0,p1,q0,q1):
+# uses a distance/length cutoff for how far lines should be before it's not worth
+# calculating a precise distance
+def ls2ls(p0,p1,q0,q1, dlc = 0.8):
     u = p1 - p0
     v = q1 - q0
     w0 = p0 - q0
+
+    s = max(v.length(), u.length()) * dlc
+    l0 = w0.length()
+    if l0 > s:
+        w1, w2, w3 = p1 - q1, p0 - q1, p1 - q0
+        l1, l2, l3 = w1.length(), w2.length(), w3.length()
+        g = min(l0,l1,l2,l3)
+        if g > s:
+            if g == l0:
+                return w0
+            if g == l1:
+                return w1
+            if g == l2:
+                return w2
+            return w3
 
     a = float(u * u)
     b = float(u * v)
@@ -96,7 +113,9 @@ def ls2ls(p0,p1,q0,q1):
 
 
 class Verlet:
-    def __init__(self, x, y, z):
+    def __init__(self, x=0, y=0, z=0):
+        if isinstance(x, Vec3):
+            x,y,z = x.x, x.y, x.z
         self.pos = Vec3(x,y,z)
         self.prev = Vec3(x,y,z)
         self.edges = []
@@ -172,14 +191,51 @@ class PlaneConstraint:
             v.pos = self.project(v.pos)
             v.prev = v.pos
 
-verlets = [Verlet(scrdim[0]/2 + (i % 4) * 50, scrdim[1]/2 + (i / 4) * 50, i) for i in xrange(16)]
-edges = [Edge(verlets[i] , verlets[i/2], 140, 2) for i in xrange(1, 16)]
-planes = [PlaneConstraint(Vec3(0, 600, 0), Vec3(0, -1, 0))]
+class MeshBuilder:
+    def __init__(self, edge_props = {"elasticity": 2}):
+        self.edge_props = edge_props
+    def buildMesh(self, points = [], edges = [], origin = Vec3(0,0,0)):
+        verlets = [Verlet(p + origin) for p in points]
+        edges = [Edge(verlets[edge[0]], verlets[edge[1]], (points[edge[0]] - points[edge[1]]).length(), **self.edge_props) for edge in edges]
+        return (verlets, edges)
+
+
+
+#verlets = [Verlet(scrdim[0]/2 + (i % 4) * 50, scrdim[1]/2 + (i / 4) * 50, i) for i in xrange(16)]
+#edges = [Edge(verlets[i] , verlets[i/2], 140, 2) for i in xrange(1, 16)]
+verlets = []
+edges = []
+
+planes = [PlaneConstraint(Vec3(0, scrdim[1] - 100, 0), Vec3(0, -1, 0))]
 
 # edges = [Edge(verlets[i], verlets[i-4], 50, 2) for i in xrange(4, 16)]
 # edges.extend([Edge(verlets[i], verlets[i-1], 50, 2) for i in xrange(16) if i % 4])
 # edges.extend([Edge(verlets[i], verlets[i+3], 50 * 2 ** 0.5, 2) for i in xrange(12) if i % 4])
 # edges.extend([Edge(verlets[i], verlets[i+5], 50 * 2 ** 0.5, 2) for i in xrange(12) if (i+1) % 4])
+
+def all_pairs(x):
+    out = []
+    for i in xrange(x):
+        for j in xrange(i):
+            out.append((i, j))
+    return out
+
+builder = MeshBuilder()
+v1, e1 = builder.buildMesh(
+    [
+    Vec3(  0,  0,  0),
+    Vec3(200,  0,  0),
+    Vec3(200,200,  0),
+    Vec3(  0,200,  0),
+    Vec3(  0,200,200),
+    Vec3(200,200,200),
+    Vec3(200,  0,200),
+    Vec3(  0,  0,200),
+    ],all_pairs(8),
+    Vec3(300,500))
+
+verlets.extend(v1)
+edges.extend(e1)
 
 v2 = [Verlet(scrdim[0]/2 + (i % 4) * 50, scrdim[1]/2 + (i / 4) * 50, i) for i in xrange(4)]
 e2 = [
