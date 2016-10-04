@@ -67,6 +67,7 @@ def ls2ls(p0,p1,q0,q1, dlc = 0.8):
     v = q1 - q0
     w0 = p0 - q0
 
+    # Is this actually any cheaper than just doing the calculation
     s = max(v.length(), u.length()) * dlc
     l0 = w0.length()
     if l0 > s:
@@ -138,6 +139,13 @@ class Verlet:
         edge.v2.pos += delta * disp * 0.25
     def render(self, surface):
         pygame.draw.circle(surface, (255,125,0), (int(self.pos.x), int(self.pos.y)), 2)
+    def target(self, pos, response = 0.3, topspeed = 3):
+        d = self.pos - pos
+        d = d * 0.3
+        dl2 = d * d
+        if dl2 > topspeed * topspeed:
+            d = d * topspeed * topspeed / dl2
+        self.prev += d
 
 
 class Edge:
@@ -199,12 +207,21 @@ class MeshBuilder:
         edges = [Edge(verlets[edge[0]], verlets[edge[1]], (points[edge[0]] - points[edge[1]]).length(), **self.edge_props) for edge in edges]
         return (verlets, edges)
 
+class Skeleton:
+    def __init__(self, joints, bones):
+        self.joints = joints
+        self.bones = bones
+        self.feet = []
+    def setFeet(self, indices):
+        self.feet = indices
+    def balance(self):
+        pass
 
 
-#verlets = [Verlet(scrdim[0]/2 + (i % 4) * 50, scrdim[1]/2 + (i / 4) * 50, i) for i in xrange(16)]
-#edges = [Edge(verlets[i] , verlets[i/2], 140, 2) for i in xrange(1, 16)]
-verlets = []
-edges = []
+verlets = [Verlet(scrdim[0]/2 + (i % 4) * 50, scrdim[1]/2 + (i / 4) * 50, i) for i in xrange(16)]
+edges = [Edge(verlets[i] , verlets[i/2], 140, 2) for i in xrange(1, 16)]
+#verlets = []
+#edges = []
 
 planes = [PlaneConstraint(Vec3(0, scrdim[1] - 100, 0), Vec3(0, -1, 0))]
 
@@ -220,18 +237,44 @@ def all_pairs(x):
             out.append((i, j))
     return out
 
-builder = MeshBuilder()
+builder = MeshBuilder({"elasticity":1.2})
 v1, e1 = builder.buildMesh(
     [
-    Vec3(  0,  0,  0),
-    Vec3(200,  0,  0),
-    Vec3(200,200,  0),
-    Vec3(  0,200,  0),
-    Vec3(  0,200,200),
-    Vec3(200,200,200),
-    Vec3(200,  0,200),
-    Vec3(  0,  0,200),
-    ],all_pairs(8),
+    Vec3(  0,  0,  0),#A
+    Vec3(200,  0,  0),#B
+    Vec3(200,200,  0),#F
+    Vec3(  0,200,  0),#E
+    Vec3(  0,200,200),#G
+    Vec3(200,200,200),#H
+    Vec3(200,  0,200),#D
+    Vec3(  0,  0,200),#C
+    ],#all_pairs(8),
+    [
+    [0,1],
+    [1,2],
+    [2,3],
+    [3,0],
+
+    [4,5],
+    [5,6],
+    [6,7],
+    [7,4],
+
+    [7,0],
+    [3,4],
+    [2,5],
+    [1,6],
+
+    [0,5],
+
+    [1,7],
+    [7,3],
+    [3,1],
+
+    [2,4],
+    [4,6],
+    [6,2],
+    ],
     Vec3(300,500))
 
 verlets.extend(v1)
@@ -296,8 +339,8 @@ while run:
             # v.edgeCollision(e)
     if active_pt[0] is not None:
         p = pygame.mouse.get_pos()
-        active_pt[0].pos.x += ((p[0] - screen_x) - active_pt[0].pos.x) * 0.3
-        active_pt[0].pos.y += ((p[1] - screen_y) - active_pt[0].pos.y) * 0.3
+        p = Vec3(p[0], p[1], 0)
+        active_pt[0].target(p, topspeed = 1000)
 
     screen.blit(bg, (0,0))
 
