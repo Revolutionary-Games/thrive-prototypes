@@ -14,6 +14,8 @@ class Vec3:
     def __init__(self, x=0, y=0, z=0):
         if isinstance(x, Vec3):
             self.x, self.y, self.z = x.x, x.y, x.z
+        elif isinstance(x, (tuple, list)):
+            self.x, self.y, self.z = x[0], x[1], x[2]
         else:
             self.x, self.y, self.z = x, y, z
     def __neg__(self):
@@ -24,12 +26,15 @@ class Vec3:
         self.x += other.x
         self.y += other.y
         self.z += other.z
+        return self
     def __sub__(self, other):
         return Vec3(self.x - other.x, self.y - other.y, self.z - other.z)
     def __isub__(self, other):
         self.x -= other.x
         self.y -= other.y
         self.z -= other.z
+        return self
+    # We can't have an imul, because dot product can't be done in-place
     def __mul__(self, other):
         if isinstance(other, Vec3):
             return self.x * other.x + self.y * other.y + self.z * other.z
@@ -39,6 +44,12 @@ class Vec3:
         return self * other
     def __div__(self, other):
         return Vec3(self.x / other, self.y / other, self.z / other)
+    def __idiv__(self, other):
+        other = float(other)
+        self.x /= other
+        self.y /= other
+        self.z /= other
+        return self
     def proj(self, other):
         # return the projection of this onto the given vector
         return other * (self * other) / (other * other)
@@ -211,9 +222,9 @@ class MeshBuilder:
     def __init__(self, edge_props = {"elasticity": 2}):
         self.edge_props = edge_props
     def buildMesh(self, points = [], edges = [], origin = Vec3(0,0,0)):
-        verlets = [Verlet(p + origin) for p in points]
-        edges = [Edge(verlets[edge[0]], verlets[edge[1]], (points[edge[0]] - points[edge[1]]).length(), **self.edge_props) for edge in edges]
-        return (verlets, edges)
+        vs = [Verlet(q + origin) for q in map(lambda p: p if isinstance(p, Vec3) else Vec3(p), points)]
+        es = [Edge(vs[edge[0]], vs[edge[1]], (vs[edge[0]].pos - vs[edge[1]].pos).length(), **self.edge_props) for edge in edges]
+        return (vs, es)
 
 class Skeleton:
     def __init__(self, joints, bones):
@@ -247,16 +258,17 @@ def all_pairs(x):
 builder = MeshBuilder({"elasticity":1.2})
 v1, e1 = builder.buildMesh(
     [
-    Vec3(  0,  0,  0),#A
-    Vec3(200,  0,  0),#B
-    Vec3(200,200,  0),#F
-    Vec3(  0,200,  0),#E
-    Vec3(  0,200,200),#G
-    Vec3(200,200,200),#H
-    Vec3(200,  0,200),#D
-    Vec3(  0,  0,200),#C
+    (  0,  0,  0),#A
+    (200,  0,  0),#B
+    (200,200,  0),#F
+    (  0,200,  0),#E
+    (  0,200,200),#G
+    (200,200,200),#H
+    (200,  0,200),#D
+    (  0,  0,200),#C
     ],#all_pairs(8),
     [
+    # all orthogonal adjacencies
     (0,1),
     (1,2),
     (2,3),
@@ -272,30 +284,38 @@ v1, e1 = builder.buildMesh(
     (2,5),
     (1,6),
 
-    (0,5),
+    # one interior tetrahedron
+    (0,2),
+    (0,4),
+    (0,6),
 
     (1,7),
     (7,3),
     (3,1),
 
+    # the other interior tetrahedron
     (2,4),
     (4,6),
     (6,2),
+
+    (5,3),
+    (5,1),
+    (5,7),
     ],
     Vec3(300,500))
 
 verlets.extend(v1)
 edges.extend(e1)
 
-v2 = [Verlet(scrdim[0]/2 + (i % 4) * 50, scrdim[1]/2 + (i / 4) * 50, i) for i in xrange(4)]
-e2 = [
-    Edge(v2[0] , v2[1], 140, 2),
-    Edge(v2[0] , v2[2], 140, 2),
-    Edge(v2[0] , v2[3], 140, 2),
-    Edge(v2[1] , v2[2], 140, 2),
-    Edge(v2[1] , v2[3], 140, 2),
-    Edge(v2[2] , v2[3], 140, 2),
-]
+v2, e2 = builder.buildMesh(
+    [
+    (100,100,100),
+    (100,-100,-100),
+    (-100,100,-100),
+    (-100,-100,100),
+    ],
+    all_pairs(4),
+    Vec3(500, 300, 0))
 
 verlets.extend(v2)
 edges.extend(e2)
@@ -332,7 +352,6 @@ while run:
                     break
         if event.type == MOUSEBUTTONUP:
             active_pt[0] = None
-
 
     for i in xrange(len(edges)):
         edges[i].move()
