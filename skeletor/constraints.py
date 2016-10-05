@@ -235,9 +235,17 @@ class Skeleton:
         self.feet = indices
     def balance(self):
         pass
+    def compress(self):
+        avg = Vec3()
+        for joint in self.joints:
+            avg += joint.pos
+        avg /= len(self.joints)
+        for joint in self.joints:
+            joint.target(avg)
 
 verlets = [Verlet(scrdim[0]/2 + (i % 4) * 50, scrdim[1]/2 + (i / 4) * 50, i) for i in xrange(16)]
 edges = [Edge(verlets[i] , verlets[i/2], 140, 2) for i in xrange(1, 16)]
+skeleton = Skeleton([v for v in verlets], [ed for ed in edges])
 #verlets = []
 #edges = []
 
@@ -352,6 +360,8 @@ while run:
                     break
         if event.type == MOUSEBUTTONUP:
             active_pt[0] = None
+
+    # skeleton.compress()
 
     for i in xrange(len(edges)):
         edges[i].move()
