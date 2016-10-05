@@ -20,8 +20,16 @@ class Vec3:
         return Vec3(-self.x, -self.y, -self.z)
     def __add__(self, other):
         return Vec3(self.x + other.x, self.y + other.y, self.z + other.z)
+    def __iadd__(self, other):
+        self.x += other.x
+        self.y += other.y
+        self.z += other.z
     def __sub__(self, other):
         return Vec3(self.x - other.x, self.y - other.y, self.z - other.z)
+    def __isub__(self, other):
+        self.x -= other.x
+        self.y -= other.y
+        self.z -= other.z
     def __mul__(self, other):
         if isinstance(other, Vec3):
             return self.x * other.x + self.y * other.y + self.z * other.z
@@ -217,7 +225,6 @@ class Skeleton:
     def balance(self):
         pass
 
-
 verlets = [Verlet(scrdim[0]/2 + (i % 4) * 50, scrdim[1]/2 + (i / 4) * 50, i) for i in xrange(16)]
 edges = [Edge(verlets[i] , verlets[i/2], 140, 2) for i in xrange(1, 16)]
 #verlets = []
@@ -250,30 +257,30 @@ v1, e1 = builder.buildMesh(
     Vec3(  0,  0,200),#C
     ],#all_pairs(8),
     [
-    [0,1],
-    [1,2],
-    [2,3],
-    [3,0],
+    (0,1),
+    (1,2),
+    (2,3),
+    (3,0),
 
-    [4,5],
-    [5,6],
-    [6,7],
-    [7,4],
+    (4,5),
+    (5,6),
+    (6,7),
+    (7,4),
 
-    [7,0],
-    [3,4],
-    [2,5],
-    [1,6],
+    (7,0),
+    (3,4),
+    (2,5),
+    (1,6),
 
-    [0,5],
+    (0,5),
 
-    [1,7],
-    [7,3],
-    [3,1],
+    (1,7),
+    (7,3),
+    (3,1),
 
-    [2,4],
-    [4,6],
-    [6,2],
+    (2,4),
+    (4,6),
+    (6,2),
     ],
     Vec3(300,500))
 
