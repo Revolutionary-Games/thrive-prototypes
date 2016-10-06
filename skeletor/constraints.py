@@ -159,12 +159,12 @@ class Verlet:
     def render(self, surface):
         pygame.draw.circle(surface, (255,125,0), (int(self.pos.x), int(self.pos.y)), 2)
     def target(self, pos, response = 0.3, topspeed = 3):
-        d = self.pos - pos
+        d = pos - self.pos 
         d = d * 0.3
         dl2 = d * d
         if dl2 > topspeed * topspeed:
             d = d * topspeed * topspeed / dl2
-        self.prev += d
+        self.pos += d
 
 
 class Edge:
