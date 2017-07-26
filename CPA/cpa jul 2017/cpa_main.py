@@ -2,7 +2,7 @@ from process_system import *
 from utils import *
 
 STEP_SIZE = 10
-NUMBER_OF_STEPS = 1000
+NUMBER_OF_STEPS = 500
 NUMBER_OF_SPECIES = 1
 
 STARTING_POPULATION = 10000
@@ -52,7 +52,7 @@ class Species:
         self.population = population
         self.storage_space = 0
         self.composition = {}
-        self.processes = {"aminoacid synthesis": 0.2} # that's what the nucleus does
+        self.processes = {"aminoacid synthesis": 1.0} # that's what the nucleus does
         self.organelles = organelles.copy()
 
         for organelle_name, amount in organelles.items():
@@ -115,15 +115,15 @@ Process("aminoacid synthesis", {"glucose": 1, "ammonia": 1}, {"atp": 1, "aminoac
 
 # Defining organelles
 print("")
-Organelle("vacuole", 100, {}, {"glucose": 2, "aminoacids": 4})
-Organelle("mitochondrion", 0, {"respiration": 0.07}, {"glucose": 2, "aminoacids": 4})
-Organelle("chloroplast", 0, {"photosynthesis": 0.2}, {"glucose": 2, "aminoacids": 4})
+Organelle("vacuole", 100, {}, {"aminoacids": 4})
+Organelle("mitochondrion", 0, {"respiration": 0.07}, {"aminoacids": 4})
+Organelle("chloroplast", 0, {"photosynthesis": 0.2}, {"aminoacids": 4})
 
 print("")
 patch = [Species(STARTING_POPULATION, {"vacuole": 2, "mitochondrion": 1}) for i in range(NUMBER_OF_SPECIES)]
 
 print("")
-biome = Biome({"oxygen": 30000, "co2": 75000, "ammonia": 4250, "glucose": 32500}, {"oxygen": 300, "co2": 750, "ammonia": 425, "glucose": 325})
+biome = Biome({"oxygen": 3000, "co2": 7500, "ammonia": 8000, "glucose": 8000}, {"oxygen": 30, "co2": 75, "ammonia": 80, "glucose": 80})
 
 for i in range(NUMBER_OF_STEPS):
     #print("")
@@ -137,9 +137,10 @@ for i in range(NUMBER_OF_STEPS):
         species.processor.step(STEP_SIZE, species.population, process_registry, compound_registry)
         species.increasePopulation()
         species.decreasePopulation()
+        species.processor.calculateStorageSpace(species.population)
         purged_compounds = addDict(purged_compounds, species.processor.purgeCompounds(process_registry, compound_registry))
+        species.processor.calculateStorageSpace(species.population)
         species.processor.printCompounds()
-        print("Storage space: " + str(species.processor.free_space))
         print("Population of " + str(species.id) + ": " + str(species.population))
         print("")
         biome.step()

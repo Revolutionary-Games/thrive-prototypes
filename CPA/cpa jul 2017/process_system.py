@@ -34,6 +34,9 @@ def calculatePrice(oldPrice, supply, demand):
 def spaceSofteningFunction(availableSpace, requiredSpace):
     return 2.0 * (1.0 - sigmoid(requiredSpace / (availableSpace + 1.0) * STORAGE_SPACE_MULTIPLIER))
 
+def importantCompoundPriceInflation(amount):
+    return IMPORTANT_COMPOUND_BIAS / (amount + 1.0)
+
 class CompoundData:
     def __init__(self, name, initial_amount):
         self.name = name
@@ -103,9 +106,8 @@ class Processor:
             # Inflating the price if the compound is useful outside of this system.
             compound_info.price = compound_info.uninflatedPrice
             if compound_registry[compound_name].is_useful:
-                compound_info.price += (IMPORTANT_COMPOUND_BIAS + self.free_space) / (compound_info.amount + 1)
-                reducedPrice = (IMPORTANT_COMPOUND_BIAS + self.free_space) / (compound_info.amount + 2)
-                compound_info.priceReductionPerUnit += compound_info.price - reducedPrice
+                compound_info.price += importantCompoundPriceInflation(compound_info.amount)
+                compound_info.priceReductionPerUnit += importantCompoundPriceInflation(compound_info.amount) - importantCompoundPriceInflation(compound_info.amount + 1)
 
             # Calculating the break-even point
             if compound_info.price <= 0.0 or compound_info.priceReductionPerUnit <= 0.0:
@@ -251,12 +253,12 @@ class Processor:
             priceSum = 0
             for compound_name, compound_info in self.compound_data.items():
                 if compound_info.amount > 0:
-                    priceSum += compound_info.price / compound_info.amount
+                    priceSum += compound_info.amount / compound_info.price
 
             # Dumping each compound according to it's price.
             for compound_name, compound_info in self.compound_data.items():
                 if compound_info.amount > 0:
-                    amountToEject = min(compounds_to_purge * (priceSum - compound_info.price / compound_info.amount) / priceSum, compound_info.amount)
+                    amountToEject = min(compounds_to_purge * (compound_info.amount / compound_info.price) / priceSum, compound_info.amount)
                     if amountToEject < 0: print(priceSum, compound_info.price, compound_info.amount, compound_name)
                     purged_compounds_this_round[compound_name] = amountToEject
                     compound_info.amount -= amountToEject
@@ -264,7 +266,6 @@ class Processor:
 
             purged_compounds = addDict(purged_compounds, purged_compounds_this_round)
 
-        print(purged_compounds)
         return purged_compounds
 
     def getBreakEvenPointMap(self, process_name, process_registry):
