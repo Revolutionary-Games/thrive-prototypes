@@ -136,7 +136,7 @@ class Processor:
 
                 # Calculating the optimal process rate considering the storage space.
                 desiredRateWithSpace = self.getOptimalProcessRate(process_name, True, process_registry, compound_registry)
-
+                if(process_name == "aminoacid synthesis"): print(desiredRate, desiredRateWithSpace, max_rate)
                 desiredRateWithSpace = min(desiredRateWithSpace, desiredRate)
                 if desiredRate > 0.0:
                     rate = min(max_rate * delta_time / 1000, processLimitCapacity, desiredRateWithSpace)
@@ -231,6 +231,7 @@ class Processor:
         # Avoiding zero-division errors.
         if outputPriceDecrement + inputPriceIncrement > 0:
             desiredRate = (baseOutputPrice - baseInputPrice) / (outputPriceDecrement + inputPriceIncrement)
+            if(process_name == "aminoacid synthesis" and not considers_space): print(baseOutputPrice, baseInputPrice, outputPriceDecrement, inputPriceIncrement)
         else:
             desiredRate = 0.0
         if desiredRate <= 0.0: return 0.0
@@ -251,19 +252,21 @@ class Processor:
             purged_compounds_this_round = {}
             # Calculating each compound price to dump proportionally.
             priceSum = 0
+            compounds_purged_amount = 0
             for compound_name, compound_info in self.compound_data.items():
-                if compound_info.amount > 0:
+                if compound_info.price > 0:
                     priceSum += compound_info.amount / compound_info.price
 
             # Dumping each compound according to it's price.
             for compound_name, compound_info in self.compound_data.items():
                 if compound_info.amount > 0:
                     amountToEject = min(compounds_to_purge * (compound_info.amount / compound_info.price) / priceSum, compound_info.amount)
-                    if amountToEject < 0: print(priceSum, compound_info.price, compound_info.amount, compound_name)
+                    if amountToEject < 0: print(priceSum, compound_info.price, compound_info.amount, compound_name, priceSum, compounds_to_purge)
                     purged_compounds_this_round[compound_name] = amountToEject
                     compound_info.amount -= amountToEject
-                compounds_to_purge -= amountToEject
+                    compounds_purged_amount += amountToEject
 
+            compounds_to_purge -= compounds_purged_amount
             purged_compounds = addDict(purged_compounds, purged_compounds_this_round)
 
         return purged_compounds

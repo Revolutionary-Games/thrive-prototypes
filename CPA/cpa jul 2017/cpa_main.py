@@ -8,7 +8,7 @@ NUMBER_OF_SPECIES = 1
 STARTING_POPULATION = 10000
 
 BIRTH_RATE = 0.1
-DEATH_RATE = 0.01
+DEATH_RATE = 0.02
 
 BIOME_COMPOUND_OBTENTION_RATE = 0.01
 
@@ -20,7 +20,7 @@ class Compound:
     def __init__(self, name, initial_amount, is_useful, volume):
         self.name = name
         self.is_useful = is_useful
-        self.initial_amount = initial_amount
+        self.initial_amount = initial_amount * STARTING_POPULATION
         self.volume = volume
         compound_registry[name] = self
         Process("purge " + name, {name: 1}, {})
@@ -52,7 +52,7 @@ class Species:
         self.population = population
         self.storage_space = 0
         self.composition = {}
-        self.processes = {"aminoacid synthesis": 1.0} # that's what the nucleus does
+        self.processes = {"aminoacid synthesis": 100000000.0} # that's what the nucleus does
         self.organelles = organelles.copy()
 
         for organelle_name, amount in organelles.items():
@@ -81,6 +81,7 @@ class Species:
         for compound_name, amount in self.composition.items():
             self.processor.compound_data[compound_name].amount -= max_change * amount
 
+        print(max_change)
         self.population += max_change
 
 class Biome:
@@ -100,7 +101,7 @@ class Biome:
 
 # Defining compounds
 print("")
-Compound("atp", 40, True, 1.0)
+Compound("atp", 40, False, 1.0)
 Compound("oxygen", 20, False, 1.0)
 Compound("glucose", 10, False, 1.0)
 Compound("co2", 10, False, 1.0)
