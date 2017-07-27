@@ -124,32 +124,75 @@ class Biome:
 
 # Defining the compounds.
 print("")
-Compound("atp", 40, False, 1.0)
+#environmental
+Compound("sulfur", 10, False, 1.0)
+Compound("hydrogensulphide", 10, False, 1.0)
 Compound("oxygen", 20, False, 1.0)
-Compound("glucose", 10, False, 1.0)
 Compound("co2", 10, False, 1.0)
 Compound("ammonia", 0, False, 1.0)
-Compound("aminoacids", 0, True, 1.0)
+Compound("phosphates", 0, False, 1.0)
+#manufactured by microbes
+Compound("atp", 40, False, 1.0)
+Compound("glucose", 10, False, 1.0)
+Compound("pyruvate", 10, False, 1.0)
+Compound("aminoacids", 10, True, 1.0)
+Compound("fat", 0, False, 1.0)
+Compound("nucleotide", 0, False, 1.0)
+Compound("protein", 0, True, 1.0)
+Compound("agent", 0, True, 1.0)
+Compound("DNA", 0, True, 1.0)
+
 
 # Defining the processes.
 print("")
-Process("respiration", {"glucose": 1, "oxygen": 6}, {"atp": 36, "co2": 6})
+Process("chemosynthesis", {"hydrogensulphide": 12, "co2": 6}, {"glucose": 1, "sulphur": 12})
 Process("photosynthesis", {"co2": 6}, {"glucose": 1, "oxygen": 6})
-Process("aminoacid synthesis", {"glucose": 1, "ammonia": 1}, {"atp": 1, "aminoacids": 1, "co2": 1})
+Process("glycolysis", {"glucose": 1}, {"pyruvate": 2, "atp": 2})
+Process("respiration", {"pyruvate": 1, "oxygen": 3}, {"atp": 18, "co2": 3})
+Process("sulfur respiration", {"pyruvate": 1, "sulfur": 3}, {"atp": 8, "co2": 3, "hydrogensulphide" : 3})
+Process("aminoacid synthesis", {"pyruvate": 1, "ammonia": 1, "atp": 3}, {"aminoacids": 1})
+Process("aminoacid digestion", {"aminoacids": 1}, {"pyruvate": 1, "ammonia": 1})
+Process("protein synthesis", {"aminoacids": 1, "atp": 4}, {"protein" : 1})
+Process("protein digestion", {"protein" : 1}, {"aminoacids": 1})
+Process("fat synthesis", {"pyruvate": 9, "atp": 56}, {"fat" : 1, "co2" : 9})
+Process("fat digestion", {"fat" : 1, "co2" : 9}, {"pyruvate": 9, "atp": 45})
+Process("nucleotide synthesis", {"glucose": 1, "phosphates": 1, "atp": 8, "aminoacids" : 2}, {"nucleotide" : 1})
+Process("nucleotide digestion", {"nucleotide" : 1}, {"glucose": 1, "phosphates": 1, "aminoacids" : 2})
+Process("agent synthesis", {"protein": 1, "atp" : 5}, {"agent" : 1})
+Process("agent digestion", {"agent" : 1}, {"protein": 1})
+Process("DNA synthesis", {"nucleotide": 1, "atp" : 5}, {"DNA" : 1})
+Process("DNA digestion", {"DNA" : 1}, {"nucleotide": 1})
+
 
 # Defining the organelles.
 print("")
 Organelle("vacuole", 100, {}, {"aminoacids": 4})
 Organelle("mitochondrion", 0, {"respiration": 0.07}, {"aminoacids": 4})
+Organelle("sulfur mitochondrion", 0, {"sulfur respiration": 0.07}, {"aminoacids": 4})
 Organelle("chloroplast", 0, {"photosynthesis": 0.2}, {"aminoacids": 4})
+Organelle("chemoplast", 0, {"chemosynthesis": 0.2}, {"aminoacids": 4})
+Organelle("cytoplasm", 0, {"glycolysis": 0.2, 
+                            "fat synthesis": 0.2, 
+                            "fat digestion": 0.2,
+                            "aminoacid synthesis": 0.2,
+                            "aminoacid digestion": 0.2}, {"aminoacids": 4})
+Organelle("agent gland", 0, {"agent synthesis": 0.2}, {"aminoacids": 4})
+Organelle("nucleus", 0, {"nucleotide synthesis": 0.2, 
+                            "DNA synthesis": 0.2, 
+                            "protein synthesis": 0.2}, {"aminoacids": 4})
+Organelle("lysosomes", 0, {"protein digestion": 0.2, 
+                            "nucleotide digestion": 0.2, 
+                            "DNA digestion": 0.2,
+                            "agent digestion": 0.2}, {"aminoacids": 4})
+
 
 # Creating the patch, aka the species list.
 print("")
-patch = [Species(STARTING_POPULATION, {"vacuole": 2, "mitochondrion": 1}) for i in range(NUMBER_OF_SPECIES)]
+patch = [Species(STARTING_POPULATION, {"vacuole": 2, "mitochondrion": 1, "nucleus": 1, "cytoplasm":1, "lysosomes":1}) for i in range(NUMBER_OF_SPECIES)]
 
 # Defining the biome.
 print("")
-biome = Biome({"oxygen": 30000, "co2": 75000, "ammonia": 80000, "glucose": 80000}, {"oxygen": 300, "co2": 750, "ammonia": 800, "glucose": 800})
+biome = Biome({"oxygen": 30000, "co2": 75000, "ammonia": 80000, "glucose": 80000, "phosphates": 10000}, {"oxygen": 300, "co2": 750, "ammonia": 800, "glucose": 800, "phosphates": 100})
 
 for i in range(NUMBER_OF_POPULATION_STEPS):
     #print("")
