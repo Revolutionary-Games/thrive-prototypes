@@ -13,7 +13,7 @@ NUMBER_OF_PROCESS_STEPS = 100
 NUMBER_OF_POPULATION_STEPS = 1000
 
 # The number of species a patch has.
-NUMBER_OF_SPECIES = 10
+NUMBER_OF_SPECIES = 1
 
 # The starting population of each species.
 STARTING_POPULATION = 10000
@@ -70,8 +70,8 @@ class Species:
         species_index += 1
         self.population = population
         self.storage_space = 0
-        self.composition = {"aminoacids": 4} # that's what the nucleus costs.
-        self.processes = {"aminoacid synthesis": 0.5} # that's what the nucleus does.
+        self.composition = {}
+        self.processes = {}
         self.organelles = organelles.copy()
 
         for organelle_name, amount in organelles.items():
@@ -198,11 +198,24 @@ for i in range(NUMBER_OF_POPULATION_STEPS):
     #print("")
     purged_compounds = {}
     for j in range(NUMBER_OF_PROCESS_STEPS):
+      # Calculating the total patch population to divide the biome compounds accordingly.
+        patch_population = 0
         for species in patch:
-            for compound_name, compound_amount in biome.compounds.items():
-                amount = compound_amount * BIOME_COMPOUND_OBTENTION_RATE
+            patch_population += species.population
+
+        # Making the biome release a percentage of its compounds.
+        biome_compounds_released = {}
+        for compound_name, compound_amount in biome.compounds.items():
+            amount = compound_amount * BIOME_COMPOUND_OBTENTION_RATE
+            biome_compounds_released[compound_name] = amount
+            biome.compounds[compound_name] -= amount
+
+        for species in patch:
+            # Giving the species the released compounds of the biome, according to the percentage of the
+            # patch population that the species represents.
+            for compound_name, compound_amount in biome_compounds_released.items():
+                amount = compound_amount * species.population / patch_population
                 species.processor.compound_data[compound_name].amount += amount
-                biome.compounds[compound_name] -= amount
 
             species.processor.calculateStorageSpace(species.population)
             species.processor.step(PROCESS_STEP_SIZE, species.population, process_registry, compound_registry)
@@ -213,7 +226,7 @@ for i in range(NUMBER_OF_POPULATION_STEPS):
         species.increasePopulation()
         species.decreasePopulation()
         purged_compounds = addDict(purged_compounds, species.processor.purgeCompounds(process_registry, compound_registry))
-        #species.processor.printCompounds()
+        species.processor.printCompounds()
         print("Population of " + str(species.id) + ": " + str(species.population))
     print("")
     biome.addCompounds(purged_compounds)
