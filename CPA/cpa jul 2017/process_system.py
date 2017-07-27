@@ -136,7 +136,7 @@ class Processor:
 
                 # Calculating the optimal process rate considering the storage space.
                 desiredRateWithSpace = self.getOptimalProcessRate(process_name, True, process_registry, compound_registry)
-                if(process_name == "aminoacid synthesis"): print(desiredRate, desiredRateWithSpace, max_rate)
+
                 desiredRateWithSpace = min(desiredRateWithSpace, desiredRate)
                 if desiredRate > 0.0:
                     rate = min(max_rate * delta_time / 1000, processLimitCapacity, desiredRateWithSpace)
@@ -231,7 +231,7 @@ class Processor:
         # Avoiding zero-division errors.
         if outputPriceDecrement + inputPriceIncrement > 0:
             desiredRate = (baseOutputPrice - baseInputPrice) / (outputPriceDecrement + inputPriceIncrement)
-            if(process_name == "aminoacid synthesis" and not considers_space): print(baseOutputPrice, baseInputPrice, outputPriceDecrement, inputPriceIncrement)
+            #if(process_name == "aminoacid synthesis" and not considers_space): print(baseOutputPrice, baseInputPrice, outputPriceDecrement, inputPriceIncrement)
         else:
             desiredRate = 0.0
         if desiredRate <= 0.0: return 0.0
