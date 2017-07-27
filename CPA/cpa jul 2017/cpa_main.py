@@ -5,6 +5,9 @@ from utils import *
 # the maximum rate of the processes.
 PROCESS_STEP_SIZE = 10
 
+#base rate of processes
+PROCESS_BASE_RATE = 10
+
 # The amount of process steps before a population step, aka how much
 # time does a microbe have to produce compounds to reproduce.
 NUMBER_OF_PROCESS_STEPS = 100
@@ -138,9 +141,9 @@ Compound("pyruvate", 10, False, 1.0)
 Compound("aminoacids", 10, True, 1.0)
 Compound("fat", 0, False, 1.0)
 Compound("nucleotide", 0, False, 1.0)
-Compound("protein", 0, True, 1.0)
-Compound("agent", 0, True, 1.0)
-Compound("DNA", 0, True, 1.0)
+Compound("protein", 0, False, 1.0)
+Compound("agent", 0, False, 1.0)
+Compound("DNA", 0, False, 1.0)
 
 
 # Defining the processes.
@@ -167,32 +170,32 @@ Process("DNA digestion", {"DNA" : 1}, {"nucleotide": 1})
 # Defining the organelles.
 print("")
 Organelle("vacuole", 100, {}, {"aminoacids": 4})
-Organelle("mitochondrion", 0, {"respiration": 0.07}, {"aminoacids": 4})
-Organelle("sulfur mitochondrion", 0, {"sulfur respiration": 0.07}, {"aminoacids": 4})
-Organelle("chloroplast", 0, {"photosynthesis": 0.2}, {"aminoacids": 4})
-Organelle("chemoplast", 0, {"chemosynthesis": 0.2}, {"aminoacids": 4})
-Organelle("cytoplasm", 0, {"glycolysis": 0.2, 
-                            "fat synthesis": 0.2, 
-                            "fat digestion": 0.2,
-                            "aminoacid synthesis": 0.2,
-                            "aminoacid digestion": 0.2}, {"aminoacids": 4})
-Organelle("agent gland", 0, {"agent synthesis": 0.2}, {"aminoacids": 4})
-Organelle("nucleus", 0, {"nucleotide synthesis": 0.2, 
-                            "DNA synthesis": 0.2, 
-                            "protein synthesis": 0.2}, {"aminoacids": 4})
-Organelle("lysosomes", 0, {"protein digestion": 0.2, 
-                            "nucleotide digestion": 0.2, 
-                            "DNA digestion": 0.2,
-                            "agent digestion": 0.2}, {"aminoacids": 4})
+Organelle("mitochondrion", 0, {"respiration": PROCESS_BASE_RATE}, {"aminoacids": 4})
+Organelle("sulfur mitochondrion", 0, {"sulfur respiration": PROCESS_BASE_RATE}, {"aminoacids": 4})
+Organelle("chloroplast", 0, {"photosynthesis": PROCESS_BASE_RATE}, {"aminoacids": 4})
+Organelle("chemoplast", 0, {"chemosynthesis": PROCESS_BASE_RATE}, {"aminoacids": 4})
+Organelle("cytoplasm", 0, {"glycolysis": PROCESS_BASE_RATE, 
+                            "fat synthesis": PROCESS_BASE_RATE, 
+                            "fat digestion": PROCESS_BASE_RATE,
+                            "aminoacid synthesis": PROCESS_BASE_RATE,
+                            "aminoacid digestion": PROCESS_BASE_RATE}, {"aminoacids": 4})
+Organelle("agent gland", 0, {"agent synthesis": PROCESS_BASE_RATE}, {"aminoacids": 4})
+Organelle("nucleus", 0, {"nucleotide synthesis": PROCESS_BASE_RATE, 
+                            "DNA synthesis": PROCESS_BASE_RATE, 
+                            "protein synthesis": PROCESS_BASE_RATE}, {"aminoacids": 4})
+Organelle("lysosomes", 0, {"protein digestion": PROCESS_BASE_RATE, 
+                            "nucleotide digestion": PROCESS_BASE_RATE, 
+                            "DNA digestion": PROCESS_BASE_RATE,
+                            "agent digestion": PROCESS_BASE_RATE}, {"aminoacids": 4})
 
 
 # Creating the patch, aka the species list.
 print("")
-patch = [Species(STARTING_POPULATION, {"vacuole": 2, "mitochondrion": 1, "nucleus": 1, "cytoplasm":1, "lysosomes":1}) for i in range(NUMBER_OF_SPECIES)]
+patch = [Species(STARTING_POPULATION, {"vacuole": 2, "mitochondrion": 1, "nucleus": 1, "cytoplasm":1, "lysosomes":1, "chloroplast":1}) for i in range(NUMBER_OF_SPECIES)]
 
 # Defining the biome.
 print("")
-biome = Biome({"oxygen": 30000, "co2": 75000, "ammonia": 80000, "glucose": 80000, "phosphates": 10000}, {"oxygen": 300, "co2": 750, "ammonia": 800, "glucose": 800, "phosphates": 100})
+biome = Biome({"oxygen": 30000, "co2": 75000, "ammonia": 80000, "glucose": 80000, "phosphates": 10000}, {"oxygen": 300, "co2": 750, "ammonia": 800, "glucose": 8000, "phosphates": 100})
 
 for i in range(NUMBER_OF_POPULATION_STEPS):
     #print("")
