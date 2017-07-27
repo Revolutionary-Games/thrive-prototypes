@@ -13,7 +13,7 @@ NUMBER_OF_PROCESS_STEPS = 100
 NUMBER_OF_POPULATION_STEPS = 1000
 
 # The number of species a patch has.
-NUMBER_OF_SPECIES = 1
+NUMBER_OF_SPECIES = 10
 
 # The starting population of each species.
 STARTING_POPULATION = 10000
@@ -102,7 +102,6 @@ class Species:
         for compound_name, amount in self.composition.items():
             self.processor.compound_data[compound_name].amount -= max_change * amount
 
-        print(max_change)
         self.population += max_change
 
 class Biome:
@@ -171,7 +170,7 @@ for i in range(NUMBER_OF_POPULATION_STEPS):
         species.increasePopulation()
         species.decreasePopulation()
         purged_compounds = addDict(purged_compounds, species.processor.purgeCompounds(process_registry, compound_registry))
-        species.processor.printCompounds()
+        #species.processor.printCompounds()
         print("Population of " + str(species.id) + ": " + str(species.population))
-        print("")
+    print("")
     biome.addCompounds(purged_compounds)
