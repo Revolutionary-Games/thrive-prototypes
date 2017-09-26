@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <time.h>
 
-bool const ExtraDetail = false; //print light spectra and habitable zone calcs
+bool const ExtraDetail = true; //print light spectra and habitable zone calcs
 
 //in this program 0 = randomly generate an answer, 1 = False and 2 = True
 
@@ -111,8 +111,9 @@ void GenerateStellarSpectrum(System &GeneratedSystem){
 }
 
 void PrintSpectrum(double* Array1){
+    std::cout << "Wavelength meters : Energy Watts \n";
     for (int i = 0; i < LengthOfArrays; i++){
-        std::cout << Array1[i] << ", ";
+        std::cout << WavelengthStep*(i + 1) << ": " <<  Array1[i] << "\n";
     }
     std::cout << "\n";
 }
@@ -499,6 +500,15 @@ void PrintSystemVariables(System GeneratedSystem){
             << " kg in Atmosphere. \n";
     std::cout << "Planet Temperature = " << GeneratedSystem.PlanetTemperature << " Kelvin. \n";
     std::cout << "\n";
+
+    //compute effectiveness of Chloroplasts
+    double absorbtion_line_1 = 4.5e-7;
+    double absorbtion_line_2 = 6.5e-7;
+    std::cout << "Energy absorbed by Chloroplasts at line 1: " <<
+        GeneratedSystem.TerrestrialSpectrum[int(absorbtion_line_1/WavelengthStep) - 1] << " watts. \n";
+    std::cout << "Energy absorbed by Chloroplasts at line 2: " <<
+        GeneratedSystem.TerrestrialSpectrum[int(absorbtion_line_2/WavelengthStep) - 1] << " watts. \n \n";
+
     if (ExtraDetail){
         std::cout << "Stellar Spectrum.\n";
         PrintSpectrum(GeneratedSystem.StellarSpectrum);

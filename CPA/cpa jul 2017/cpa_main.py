@@ -3,10 +3,10 @@ from utils import *
 
 # The size of the steps used in the process system, which determine
 # the maximum rate of the processes.
-PROCESS_STEP_SIZE = 10
+PROCESS_STEP_SIZE = 100
 
 #base rate of processes
-PROCESS_BASE_RATE = 10
+PROCESS_BASE_RATE = 1
 
 # The amount of process steps before a population step, aka how much
 # time does a microbe have to produce compounds to reproduce.
