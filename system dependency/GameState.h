@@ -3,139 +3,186 @@
 #pragma once
 
 #include "System.h"
-#include "utils.h"
 
 #include <iostream>
-
-template<class... OtherDependencies>
-class _System;
-
-template<class... OtherDependencies>
-class System;
-
-// Base case.
-template<size_t K, class... OtherSystems>
-class _GameState {
-protected:
-	_GameState() {}
-
-	// This gets called when the system requested wasn't found.
-	template<typename T>
-	T* getSystem() {
-		static_assert(is_system<T>::value, "That is not a system!");
-		static_assert(!is_system<T>::value, "That system is not in the gamestate!");
-	}
-
-	template<typename BaseClass>
-	void init(){}
-
-	void update(unsigned int logicTime) {}
-
-	template<typename T, typename BaseClass>
-	void _init() {
-		static_assert(is_system<T>::value, "That is not a system!");
-		static_assert(!is_system<T>::value, "That system is not in the gamestate!");
-	}
-
-	// This gets called when the system requested wasn't found.
-	template<typename T>
-	constexpr bool hasSystem() const {
-		static_assert(is_system<T>::value, "That is not a system!");
-		return false;
-	}
-
-	// Container with all the system in the gamestate.
-	_System<>* systems[K]; // Should it be done with a std::vector instead?
-};
-
-// Variadic recursive case.
-template<size_t K, class S, class... OtherSystems>
-class _GameState<K, S, OtherSystems...> : public _GameState<K + 1, OtherSystems...> {
-protected:
-	_GameState() {
-		static_assert(is_system<S>::value, "That is not a system!");
-		systems[K] = new S(); // What is a smart pointer?
-	}
-
-public:
-	// Returns the specified system.
-	template<typename T>
-	T* getSystem() {
-		return _GameState<K + 1, OtherSystems...>::getSystem<T>();
-	}
-
-	template<>
-	S* getSystem() {
-		return static_cast<S*>(systems[K]);
-	}
-
-	template<typename T>
-	constexpr bool hasSystem() const {
-		return _GameState<K + 1, OtherSystems...>::hasSystem<T>();
-	}
-
-	template<>
-	constexpr bool hasSystem<S>() const {
-		return true;
-	}
-
-	template<typename BaseClass>
-	void init() {
-		_init<S, BaseClass>();
-		_GameState<K + 1, OtherSystems...>::init<BaseClass>();
-	}
-
-	template<typename T, typename BaseClass>
-	void _init() {
-		PartialSpecizlizationStruct<T, BaseClass>::_init(static_cast<BaseClass*>(this));
-	}
-
-	template<class T, class BaseClass>
-	struct PartialSpecizlizationStruct {
-		static void _init(BaseClass* gs) {
-			gs->_GameState<K + 1, OtherSystems...>::_init<T, BaseClass>();
-		}
-	};
-
-	template<typename BaseClass>
-	struct PartialSpecizlizationStruct<S, BaseClass> {
-		static void _init(BaseClass* gs) {
-			S* mySystem = gs->getSystem<S>();
-
-			if (!mySystem->was_initialized) {
-				std::cout << "Initializing system..." << std::endl;
-				mySystem->_init<BaseClass>(gs);
-				mySystem->init();
-			}
-
-			else
-				std::cout << "System already initialized." << std::endl;
-		}
-	};
-
-	void update(unsigned int logicTime) {
-		// TODO.
-	}
-};
+#include <thread>
+#include <shared_mutex>
+#include <tuple>
+#include <vector>
 
 // Interface to the programmer.
-template<class... OtherSystems>
-class GameState final : public _GameState<0, OtherSystems...> {
+template<class... Systems>
+class GameState final {
+private:
+	// A tuple which stores all the systems.
+	std::tuple<Systems...> systems;
+	using NumberOfSystems = std::tuple_size<decltype(systems)>;
+
+	// Auxiliary structure that holds information about each system.
+	struct SystemData {
+		// This mutex is used 
+		std::shared_timed_mutex systemMutex;
+
+		// The numbers of the systems that have to run before this system.
+		std::vector<size_t> dependencies;
+
+		// Flag that indicates whether the system was initialized or not.
+		bool was_initialized = false;
+
+		// Lambda interfaces to the system's methods.
+		std::function<void(void)> initializeSystem;
+		std::function<void(unsigned int)> updateSystem;
+	};
+
+	// An array with all the systems's data.
+	SystemData systemInformation[NumberOfSystems::value];
+
+	// Locks all the mutexes before an update cycle.
+	void lockAllMutexes() {
+		for (size_t i = 0; i < NumberOfSystems::value; i++)
+			systemInformation[i].systemMutex.lock();
+	}
+
+	// Updates a system (if it wasn't previously initialized), and all of its dependencies if needed.
+	void initializeSystem(size_t systemNumber) {
+		SystemData& systemData = systemInformation[systemNumber];
+
+		// Checking that the system wasn't already initialized.
+		if(!systemData.was_initialized) {
+			// Initializing all the dependencies first.
+			for (const size_t systemDependency : systemData.dependencies)
+				initializeSystem(systemDependency);
+
+			// Initializing the system itself.
+			systemData.initializeSystem();
+
+			// Setting the flag to avoid double initialization of the systems.
+			systemData.was_initialized = true;
+		}
+	}
+
+	// Updates a system, and manages synchronization.
+	void updateSystem(size_t systemNumber, unsigned int logicTime) {
+		SystemData& systemData = systemInformation[systemNumber];
+
+		// Waiting for all of the dependencies to finish.
+		for (const size_t systemDependency : systemData.dependencies) {
+			systemInformation[systemDependency].systemMutex.lock_shared();
+		}
+
+		// Updating the system.
+		systemData.updateSystem(logicTime);
+
+		// Unlocking the mutex so that other systems that depend on this system can update.
+		systemData.systemMutex.unlock();
+
+		// Freeing the locks.
+		for (const size_t systemDependency : systemData.dependencies) {
+			systemInformation[systemDependency].systemMutex.unlock_shared();
+		}
+	}
+
+	// Auxiliary structs to translate system numbers to system types because
+	// using just decltype on tuples breaks the compiler lmao.
+
+	// Empty base struct.
+	template<size_t K, size_t SystemNumber, class... OtherSystems>
+	struct _numberToSystemTypeTranslator{};
+
+	// Struct with actually useful information.
+	template<size_t SystemNumber, class S, class... OtherSystems>
+	struct _numberToSystemTypeTranslator<SystemNumber, SystemNumber, S, OtherSystems...> {
+		using SystemType = S;
+	};
+
+	// Recursive template specialization.
+	template<size_t K, size_t SystemNumber, class S, class... OtherSystems>
+	struct _numberToSystemTypeTranslator<K, SystemNumber, S, OtherSystems...> : public _numberToSystemTypeTranslator<K + 1, SystemNumber, OtherSystems...> {};
+
+	// Pretty interface
+	template<size_t SystemNumber>
+	using numberToSystemTypeTranslator = _numberToSystemTypeTranslator<0, SystemNumber, Systems...>;
+
+	// Generates all the dependency data.
+	// Due to partial specialization of functions not being available
+	// (and my unwillingness to create a struct to hack around it)
+	// the system number and potential dependency are packed in a singular parameter.
+	template<size_t N>
+	void generateSystemDependencies() {
+		// Unpacking the parameters
+		constexpr size_t systemNumber = N % NumberOfSystems::value;
+		constexpr size_t potentialDependency = N / NumberOfSystems::value;
+
+		// If potentialDependency is actually a dependency.
+		if (depends_on<numberToSystemTypeTranslator<systemNumber>::SystemType, numberToSystemTypeTranslator<potentialDependency>::SystemType>::value)
+			// Add it to the dependency list.
+			systemInformation[systemNumber].dependencies.push_back(potentialDependency);
+
+		// Doing the next check.
+		generateSystemDependencies<N + 1>();
+	}
+
+	// Empty function for the final recursive call.
+	template<>
+	void generateSystemDependencies<NumberOfSystems::value * NumberOfSystems::value>() {}
+
+	// Generates the lambda interfaces that the system data has.
+	template<size_t SystemNumber>
+	void generateSystemFunctions() {
+		SystemData& systemData = systemInformation[SystemNumber];
+		auto& systemToCall = std::get<SystemNumber>(systems);
+
+		// Getting the init method.
+		systemData.initializeSystem = [&systemToCall]() {
+			systemToCall.init();
+		};
+
+		// Getting the update method.
+		systemData.updateSystem = [&systemToCall](unsigned int logicTime) {
+			systemToCall.update(logicTime);
+		};
+
+		// Generating the next system.
+		generateSystemFunctions<SystemNumber + 1>();
+	}
+
+	// Empty function for the final recursive call.
+	template<>
+	void generateSystemFunctions<NumberOfSystems::value>() {}
+
 public:
+	GameState() {
+		generateSystemDependencies<0>();
+		generateSystemFunctions<0>();
+	}
+
 	// Initializes all the systems in order.
 	void init() {
 		std::cout << "Initializing gamestate..." << std::endl;
-		_GameState<0, OtherSystems...>::init<GameState>();
+
+		for (size_t i = 0; i < NumberOfSystems::value; i++)
+			initializeSystem(i);
+
 		std::cout << "Gamestate initialized!" << std::endl;
 	}
 
-	// Initializes a particular system and all its dependencies.
-	template<typename T>
-	void _init() {
-		_GameState<0, OtherSystems...>::_init<T, GameState>();
-	}
-
+	// Updates all the systems in order.
 	void update(unsigned int logicTime) {
-		_GameState<0, OtherSystems...>::update<T>(logicTime);
+		std::cout << "Updating systems..." << std::endl;
+
+		// Locking all the threads to be later unlocked when the systems update.
+		lockAllMutexes();
+
+		std::vector<std::thread> systemThreads;
+
+		// Spawning all the update threads. It should probably be done in a more efficient way.
+		for (size_t i = 0; i < NumberOfSystems::value; i++)
+			systemThreads.emplace(systemThreads.end(), &GameState::updateSystem, this, i, logicTime);
+
+		// Waiting for all the systems to finish.
+		for (auto& systemThread : systemThreads)
+			systemThread.join();
+
+		std::cout << std::endl << "Systems updated!" << std::endl;
 	}
 };

@@ -2,11 +2,7 @@
 
 #pragma once
 
-#include "GameState.h"
 #include "utils.h"
-
-template<class... OtherSystems>
-class GameState;
 
 // This empty class is used to mark dependencies from one system to another.
 template<class S>
@@ -16,17 +12,8 @@ class _SystemDependency {};
 template<class... OtherDependencies>
 class _System {
 public:
-	template<typename GameStateType>
-	void _init(GameStateType* gs) {
-		was_initialized = true;
-	}
-
-	void _update() {}
-
 	// The base system doesn't depend on anything.
 	class Dependencies {};
-
-	bool was_initialized = false;
 };
 
 // Variadic recursive case.
@@ -39,14 +26,6 @@ public:
 		// Doesn't actually display that message but it triggers a compile error, which is good enough...
 		static_assert(!depends_on<D, _System<D, OtherDependencies...>>::value, "Mutual system dependency detected!");
 	}
-
-	template<typename GameStateType>
-	void _init(GameStateType* gs) {
-		_System<OtherDependencies...>::_init<GameStateType>(gs);
-		gs->_init<D>();
-	}
-
-	void _update() {}
 
 	// This class inherits all the dependencies this system has.
 	class Dependencies : public _SystemDependency<D>,
