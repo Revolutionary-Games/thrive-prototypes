@@ -1,0 +1,5 @@
+Project: fluid_sim
+Programmer: Nathan Hock (Horseheel)
+
+SDL.dll must be in the same directory as the executable for it to run.
+Use the left mouse button to add dye to the fluid, and use the right mouse button to add turbulence.
