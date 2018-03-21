@@ -20,12 +20,14 @@ FPS=60
 force_flagella=0.1
 
 #Hex moving
-Up=np.array([0,-1*math.sqrt(3)*hex_size])
-Down=np.array([0,math.sqrt(3)*hex_size])
-Up_Right=np.array([math.sqrt(9)*hex_size/2,-1*math.sqrt(3)*hex_size/2])
-Up_Left=np.array([-1*math.sqrt(9)*hex_size/2,-1*math.sqrt(3)*hex_size/2])
-Down_Right=np.array([math.sqrt(9)*hex_size/2,math.sqrt(3)*hex_size/2])
-Down_Left=np.array([-1*math.sqrt(9)*hex_size/2,math.sqrt(3)*hex_size/2])
+x_unit = math.sqrt(9)*hex_size/2
+y_unit = math.sqrt(3)*hex_size/2
+Up=np.array([0,-2*y_unit])
+Down=np.array([0,2*y_unit])
+Up_Right=np.array([x_unit,-y_unit])
+Up_Left=np.array([-x_unit,-y_unit])
+Down_Right=np.array([x_unit,y_unit])
+Down_Left=np.array([-x_unit,y_unit])
 
 #window setup
 background_color = (0,0,0)
@@ -55,7 +57,7 @@ def display_box(screen, message):
                     (screen.get_height() / 2) - 12,
                     204,24), 1)
   if len(message) != 0:
-    screen.blit(fontobject.render(message, 1, black),
+    screen.blit(fontobject.render(message, 1, white),
                 ((screen.get_width() / 2) - 100, (screen.get_height() / 2) - 10))
   pygame.display.flip()
 
@@ -232,6 +234,8 @@ def gameloop():
 	flagella_mass=0.5
 	FPS=60
 	force_flagella=0.1
+	x_unit = math.sqrt(9)*hex_size/2
+	y_unit = math.sqrt(3)*hex_size/2
 	(center_mass_x,center_mass_y)=(0,0)
 	(dx, dy) = (0, 0)
 	
@@ -249,12 +253,14 @@ def gameloop():
 				message_to_screen("Press ESC to leave editor",(255,0,0),(0,0))
 				message_to_screen("Press ENTER to place organelle",(255,0,0),(width-280,0))
 				draw_cell(organelle_list,cell_position)
-				tilt=draw_element("Mitochondria",pygame.mouse.get_pos(),pygame.mouse.get_pressed())
+				cur=pygame.mouse.get_pos()-cell_position
+				org_pos=(round(cur[0]/x_unit)*x_unit+cell_position[0],round(cur[1]/y_unit)*y_unit+cell_position[1])
+				tilt=draw_element("Mitochondria",org_pos,pygame.mouse.get_pressed())
 				pygame.display.update()
 				for event in pygame.event.get():
 					if event.type == KEYDOWN:
 						if event.key == pygame.K_RETURN:
-							organelle_list.append(["Mitochondria",(pygame.mouse.get_pos()-cell_position),tilt])
+							organelle_list.append(["Mitochondria",org_pos-cell_position,tilt])
 							button_pressed=False
 						elif event.key == pygame.K_ESCAPE:
 							button_pressed = False
@@ -265,12 +271,14 @@ def gameloop():
 				message_to_screen("Press ESC to leave editor",(255,0,0),(0,0))
 				message_to_screen("Press ENTER to place organelle",(255,0,0),(width-280,0))
 				draw_cell(organelle_list,cell_position)
-				draw_element("Vacuole",pygame.mouse.get_pos(),pygame.mouse.get_pressed())
+				cur=pygame.mouse.get_pos()-cell_position
+				org_pos=(round(cur[0]/x_unit)*x_unit+cell_position[0],round(cur[1]/y_unit)*y_unit+cell_position[1])
+				draw_element("Vacuole",org_pos,pygame.mouse.get_pressed())
 				pygame.display.update()
 				for event in pygame.event.get():
 					if event.type == KEYDOWN:
 						if event.key == pygame.K_RETURN:
-							organelle_list.append(["Vacuole",(pygame.mouse.get_pos()-cell_position)])
+							organelle_list.append(["Vacuole",org_pos-cell_position])
 							button_pressed=False
 						elif event.key == pygame.K_ESCAPE:
 							button_pressed = False
@@ -281,13 +289,15 @@ def gameloop():
 				message_to_screen("Press ESC to leave editor",(255,0,0),(0,0))
 				message_to_screen("Press ENTER to place organelle",(255,0,0),(width-280,0))
 				draw_cell(organelle_list,cell_position)
-				draw_element("Flagella",pygame.mouse.get_pos(),pygame.mouse.get_pressed())
+				cur=pygame.mouse.get_pos()-cell_position
+				org_pos=(round(cur[0]/x_unit)*x_unit+cell_position[0],round(cur[1]/y_unit)*y_unit+cell_position[1])
+				draw_element("Flagella",org_pos,pygame.mouse.get_pressed())
 				pygame.display.update()
 				for event in pygame.event.get():
 					if event.type == KEYDOWN:
 						if event.key == pygame.K_RETURN:
-							organelle_list.append(["Flagella",(pygame.mouse.get_pos()-cell_position)])
-							flagella_list.append((pygame.mouse.get_pos()-cell_position))
+							organelle_list.append(["Flagella",org_pos-cell_position])
+							flagella_list.append(org_pos-cell_position)
 							button_pressed=False
 						elif event.key == pygame.K_ESCAPE:
 							button_pressed = False
@@ -297,13 +307,15 @@ def gameloop():
 				screen.fill(black)
 				message_to_screen("Press ESC to leave editor",(255,0,0),(0,0))
 				draw_cell(organelle_list,cell_position)
-				draw_element("Cytoplasm",pygame.mouse.get_pos(),pygame.mouse.get_pressed())
+				cur=pygame.mouse.get_pos()-cell_position
+				org_pos=(round(cur[0]/x_unit)*x_unit+cell_position[0],round(cur[1]/y_unit)*y_unit+cell_position[1])
+				draw_element("Cytoplasm",org_pos,pygame.mouse.get_pressed())
 				message_to_screen("Press ENTER to place organelle",(255,0,0),(width-280,0))
 				pygame.display.update()
 				for event in pygame.event.get():
 					if event.type == KEYDOWN:
 						if event.key == pygame.K_RETURN:
-							organelle_list.append(["Cytoplasm",(pygame.mouse.get_pos()-cell_position)])
+							organelle_list.append(["Cytoplasm",org_pos-cell_position])
 							button_pressed=False
 						elif event.key == pygame.K_ESCAPE:
 							button_pressed = False
@@ -313,13 +325,15 @@ def gameloop():
 				screen.fill(black)
 				message_to_screen("Press ESC to leave editor",(255,0,0),(0,0))
 				draw_cell(organelle_list,cell_position)
-				draw_element("Nucleus",pygame.mouse.get_pos(),pygame.mouse.get_pressed())
+				cur=pygame.mouse.get_pos()-cell_position
+				org_pos=(round(cur[0]/x_unit)*x_unit+cell_position[0],round(cur[1]/y_unit)*y_unit+cell_position[1])
+				draw_element("Nucleus",org_pos,pygame.mouse.get_pressed())
 				message_to_screen("Press ENTER to place organelle",(255,0,0),(width-280,0))
 				pygame.display.update()
 				for event in pygame.event.get():
 					if event.type == KEYDOWN:
 						if event.key == pygame.K_RETURN:
-							organelle_list.append(["Nucleus",(pygame.mouse.get_pos()-cell_position)])
+							organelle_list.append(["Nucleus",org_pos-cell_position])
 							button_pressed=False
 						elif event.key == pygame.K_ESCAPE:
 							button_pressed = False
@@ -329,13 +343,15 @@ def gameloop():
 				screen.fill(black)
 				message_to_screen("Press ESC to leave editor",(255,0,0),(0,0))
 				draw_cell(organelle_list,cell_position)
-				draw_element("Ribosomes",pygame.mouse.get_pos(),pygame.mouse.get_pressed())
+				cur=pygame.mouse.get_pos()-cell_position
+				org_pos=(round(cur[0]/x_unit)*x_unit+cell_position[0],round(cur[1]/y_unit)*y_unit+cell_position[1])
+				draw_element("Ribosomes",org_pos,pygame.mouse.get_pressed())
 				message_to_screen("Press ENTER to place organelle",(255,0,0),(width-280,0))
 				pygame.display.update()
 				for event in pygame.event.get():
 					if event.type == KEYDOWN:
 						if event.key == pygame.K_RETURN:
-							organelle_list.append(["Ribosomes",(pygame.mouse.get_pos()-cell_position)])
+							organelle_list.append(["Ribosomes",org_pos-cell_position])
 							button_pressed=False
 						elif event.key == pygame.K_ESCAPE:
 							button_pressed = False
@@ -405,13 +421,13 @@ def gameloop():
 								center_mass_x+=organelle[1][0]*flagella_mass
 								center_mass_y+=organelle[1][1]*flagella_mass
 							elif organelle[0]=='Vacuole':
-								size==1
+								size+=1
 								weight+=vacuole_mass
 								center_mass_x+=organelle[1][0]*vacuole_mass
 								center_mass_y+=organelle[1][1]*vacuole_mass
 							elif organelle[0]=='Cytoplasm':
 								size+=1
-								weight==cytoplasm_mass
+								weight+=cytoplasm_mass
 								center_mass_x+=organelle[1][0]*cytoplasm_mass
 								center_mass_y+=organelle[1][1]*cytoplasm_mass
 							elif organelle[0]=='Mitochondria':
@@ -472,10 +488,12 @@ def gameloop():
 		speed_a_str = "speed_a = " + str(speed_a)
 		speed_s_str = "speed_s = " + str(speed_s)
 		speed_d_str = "speed_d = " + str(speed_d)
+		cell_mass_str = "cell_mass = " + str(weight)
+		cell_size_str = "cell_size = " + str(size)
 		
 		screen.fill(background_color)
-		v_lines(dx,height,width,50)
-		h_lines(dy,height,width,50)
+		v_lines(dx,height,width,int(6*y_unit))
+		h_lines(dy,height,width,int(6*y_unit))
 		
 		message_to_screen("Press ESC to leave test drive",(255,0,0),(0,0))
 		message_to_screen("Press E to enter editor",(255,0,0),(width-250,0))
@@ -483,6 +501,8 @@ def gameloop():
 		message_to_screen(speed_a_str,(255,0,0),(0,height-50))
 		message_to_screen(speed_s_str,(255,0,0),(0,height-80))
 		message_to_screen(speed_d_str,(255,0,0),(0,height-110))
+		message_to_screen(cell_mass_str,(255,0,0),(0,height-140))
+		message_to_screen(cell_size_str,(255,0,0),(0,height-170))
 		
 		draw_cell(organelle_list,cell_position)
 		pygame.display.update()
