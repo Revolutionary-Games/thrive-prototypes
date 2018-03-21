@@ -45,23 +45,21 @@ def get_key():
       pass
 
 def display_box(screen, message):
-  "Print a message in a box in the middle of the screen"
   fontobject = pygame.font.Font(None,18)
-  pygame.draw.rect(screen, (0,0,0),
+  pygame.draw.rect(screen, black,
                    ((screen.get_width() / 2) - 100,
                     (screen.get_height() / 2) - 10,
                     200,20), 0)
-  pygame.draw.rect(screen, (255,255,255),
+  pygame.draw.rect(screen, white,
                    ((screen.get_width() / 2) - 102,
                     (screen.get_height() / 2) - 12,
                     204,24), 1)
   if len(message) != 0:
-    screen.blit(fontobject.render(message, 1, (255,255,255)),
+    screen.blit(fontobject.render(message, 1, black),
                 ((screen.get_width() / 2) - 100, (screen.get_height() / 2) - 10))
   pygame.display.flip()
 
 def ask(screen, question):
-  "ask(screen, question) -> answer"
   pygame.font.init()
   current_string = ""
   display_box(screen, question + ": " + current_string)
@@ -73,7 +71,7 @@ def ask(screen, question):
       break
     elif inkey <= 127:
       current_string+=chr(inkey)
-    display_box(screen, question + ": " + "".join(current_string))
+    display_box(screen, question + ": " + current_string)
   return float(current_string)
   
 def sigmoid(x):
@@ -200,6 +198,18 @@ def draw_cell(organelle_list,position):
 		elif organelle[0]=='Mitochondria':
 			draw_mitochondria(position+rel_pos,organelle[2])
 
+def v_lines(dx,height,width,step):
+	for x in range(0,width,step):
+		x += dx
+		x = x % width
+		pygame.draw.line(screen, (0,191,255), (x,0), (x,height))
+
+def h_lines(dy,height,width,step):
+	for y in range(0,height,step):
+		y += dy
+		y = y % height
+		pygame.draw.line(screen, (0,191,255), (0,y), (width,y))
+
 organelle_list =[]
 #[['Nucleus', [0, 0]],['Ribosomes', 2*Down],['Vacuole',2*Down+Down_Right],
 #['Mitochondria',2*Down+Down_Left,120],['Flagella',3*Down+Down_Left],['Flagella',3*Down+Down_Right]]
@@ -223,6 +233,7 @@ def gameloop():
 	FPS=60
 	force_flagella=0.1
 	(center_mass_x,center_mass_y)=(0,0)
+	(dx, dy) = (0, 0)
 	
 	running=True
 	editor=True
@@ -437,34 +448,42 @@ def gameloop():
 					running=False
 				if event.key == pygame.K_e:
 					editor = True
-		(dx, dy) = (0, 0)
+		
 		keys = pygame.key.get_pressed()
 		if keys[pygame.K_w]:
-			dy-=speed_w
+			dy+=speed_w
 		if keys[pygame.K_s]:
-			dy+=speed_s
+			dy-=speed_s
 		if keys[pygame.K_d]:
-			dx+=speed_d
+			dx-=speed_d
 		if keys[pygame.K_a]:
-			dx-=speed_a
+			dx+=speed_a
+			
+		(dx,dy)=(dx % width, dy % height)
 		
-		if((cell_position[0]>width and dx>0) or (cell_position[0]<0 and dx<0)):
-			dx=0
-		if((cell_position[1]>height and dy>0) or (cell_position[1]<0 and dy<0)):
-			dy=0
-
-		cell_position = cell_position +np.array([dx, dy])
+		'''I decided to move the background instead of the cell'''
+		#if((cell_position[0]>width and dx>0) or (cell_position[0]<0 and dx<0)):
+		#	dx=0
+		#if((cell_position[1]>height and dy>0) or (cell_position[1]<0 and dy<0)):
+		#	dy=0
+		#cell_position = cell_position +np.array([dx, dy])
+		
 		speed_w_str = "speed_w = " + str(speed_w)
 		speed_a_str = "speed_a = " + str(speed_a)
 		speed_s_str = "speed_s = " + str(speed_s)
 		speed_d_str = "speed_d = " + str(speed_d)
+		
 		screen.fill(background_color)
+		v_lines(dx,height,width,50)
+		h_lines(dy,height,width,50)
+		
 		message_to_screen("Press ESC to leave test drive",(255,0,0),(0,0))
 		message_to_screen("Press E to enter editor",(255,0,0),(width-250,0))
 		message_to_screen(speed_w_str,(255,0,0),(0,height-20))
 		message_to_screen(speed_a_str,(255,0,0),(0,height-50))
 		message_to_screen(speed_s_str,(255,0,0),(0,height-80))
 		message_to_screen(speed_d_str,(255,0,0),(0,height-110))
+		
 		draw_cell(organelle_list,cell_position)
 		pygame.display.update()
 		clock.tick(FPS)
