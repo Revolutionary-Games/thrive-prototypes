@@ -3,7 +3,6 @@ pygame.init()
 import numpy as np
 from pygame.locals import *
 import math
-import input_box
 
 ''' THINGS STILL TO DO
 snap to hex grid when placing new elements
@@ -21,21 +20,12 @@ FPS=60
 force_flagella=0.1
 
 #Hex moving
-Up_0=np.array([0,-1*math.sqrt(3)*hex_size])
-Down_0=np.array([0,math.sqrt(3)*hex_size])
-Up_Right_0=np.array([math.sqrt(9)*hex_size/2,-1*math.sqrt(3)*hex_size/2])
-Up_Left_0=np.array([-1*math.sqrt(9)*hex_size/2,-1*math.sqrt(3)*hex_size/2])
-Down_Right_0=np.array([math.sqrt(9)*hex_size/2,math.sqrt(3)*hex_size/2])
-Down_Left_0=np.array([-1*math.sqrt(9)*hex_size/2,math.sqrt(3)*hex_size/2])
-
 Up=np.array([0,-1*math.sqrt(3)*hex_size])
 Down=np.array([0,math.sqrt(3)*hex_size])
 Up_Right=np.array([math.sqrt(9)*hex_size/2,-1*math.sqrt(3)*hex_size/2])
 Up_Left=np.array([-1*math.sqrt(9)*hex_size/2,-1*math.sqrt(3)*hex_size/2])
 Down_Right=np.array([math.sqrt(9)*hex_size/2,math.sqrt(3)*hex_size/2])
 Down_Left=np.array([-1*math.sqrt(9)*hex_size/2,math.sqrt(3)*hex_size/2])
-
-cell_angle = 0
 
 #window setup
 background_color = (0,0,0)
@@ -46,6 +36,46 @@ editor_background_color = (55,55,55)
 screen = pygame.display.set_mode((width, height))#,pygame.FULLSCREEN)
 screen.fill(background_color)
 
+def get_key():
+  while 1:
+    event = pygame.event.poll()
+    if event.type == KEYDOWN:
+      return event.key
+    else:
+      pass
+
+def display_box(screen, message):
+  "Print a message in a box in the middle of the screen"
+  fontobject = pygame.font.Font(None,18)
+  pygame.draw.rect(screen, (0,0,0),
+                   ((screen.get_width() / 2) - 100,
+                    (screen.get_height() / 2) - 10,
+                    200,20), 0)
+  pygame.draw.rect(screen, (255,255,255),
+                   ((screen.get_width() / 2) - 102,
+                    (screen.get_height() / 2) - 12,
+                    204,24), 1)
+  if len(message) != 0:
+    screen.blit(fontobject.render(message, 1, (255,255,255)),
+                ((screen.get_width() / 2) - 100, (screen.get_height() / 2) - 10))
+  pygame.display.flip()
+
+def ask(screen, question):
+  "ask(screen, question) -> answer"
+  pygame.font.init()
+  current_string = ""
+  display_box(screen, question + ": " + current_string)
+  while 1:
+    inkey = get_key()
+    if inkey == K_BACKSPACE:
+      current_string = current_string[0:-1]
+    elif inkey == K_RETURN:
+      break
+    elif inkey <= 127:
+      current_string+=chr(inkey)
+    display_box(screen, question + ": " + "".join(current_string))
+  return float(current_string)
+  
 def sigmoid(x):
 	return 1/(1+np.exp(-x))
 
@@ -155,10 +185,8 @@ def num_button(color1, color2, x, y, width, height, var, varname):
 	text_to_button(string,black,x,y,width,height)		
 	
 def draw_cell(organelle_list,position):
-	pygame.draw.circle(screen, [0,0,255], (int(position[0]), int(position[1])), 3)
 	for organelle in organelle_list:
-		rel_pos = np.array([math.cos(cell_angle)*organelle[1][0]  - math.sin(cell_angle)*organelle[1][1],
-							math.sin(cell_angle)*organelle[1][0] + math.cos(cell_angle)*organelle[1][1]])
+		rel_pos = np.array([organelle[1][0],organelle[1][1]])
 		if organelle[0]=='Nucleus':
 			draw_nucleus(position+rel_pos)
 		elif organelle[0]=='Ribosomes':
@@ -182,7 +210,6 @@ flagella_list = []
 clock = pygame.time.Clock()
 
 def gameloop():
-	global Up, Down, Up_Right, Up_Left, Down_Right, Down_Left
 	cell_position = np.array([0.5*width, 0.5*height])
 	#Constants
 	hex_size=15
@@ -304,35 +331,35 @@ def gameloop():
 							
 			button_pressed = num_button((0,255,0),white,width-230,height-120,200,50,force_flagella,"force_flagella")
 			while button_pressed:
-				force_flagella=input_box.ask(screen,"force_flagella")
+				force_flagella=ask(screen,"force_flagella")
 				button_pressed=False
 			button_pressed = num_button((0,255,0),white,width-230,height-60,200,50,global_top_speed,"global_top_speed")
 			while button_pressed:
-				global_top_speed=input_box.ask(screen,"global_top_speed")
+				global_top_speed=ask(screen,"global_top_speed")
 				button_pressed=False
 			button_pressed = num_button((0,255,0),white,width-230,height-180,200,50,vacuole_mass,"vacuole_mass")
 			while button_pressed:
-				vacuole_mass=input_box.ask(screen,"vacuole_mass")
+				vacuole_mass=ask(screen,"vacuole_mass")
 				button_pressed=False
 			button_pressed = num_button((0,255,0),white,width-230,height-240,200,50,nucleus_mass,"nucleus_mass")
 			while button_pressed:
-				nucleus_mass=input_box.ask(screen,"nucleus_mass")
+				nucleus_mass=ask(screen,"nucleus_mass")
 				button_pressed=False
 			button_pressed = num_button((0,255,0),white,width-230,height-300,200,50,ribosome_mass,"ribosome_mass")
 			while button_pressed:
-				ribosome_mass=input_box.ask(screen,"ribosome_mass")
+				ribosome_mass=ask(screen,"ribosome_mass")
 				button_pressed=False
 			button_pressed = num_button((0,255,0),white,width-230,height-360,200,50,mitochondria_mass,"mitochondria_mass")
 			while button_pressed:
-				mitochondria_mass=input_box.ask(screen,"mitochondria_mass")
+				mitochondria_mass=ask(screen,"mitochondria_mass")
 				button_pressed=False
 			button_pressed = num_button((0,255,0),white,width-230,height-420,200,50,cytoplasm_mass,"cytoplasm_mass")
 			while button_pressed:
-				cytoplasm_mass=input_box.ask(screen,"cytoplasm_mass")
+				cytoplasm_mass=ask(screen,"cytoplasm_mass")
 				button_pressed=False
 			button_pressed = num_button((0,255,0),white,width-230,height-480,200,50,flagella_mass,"flagella_mass")
 			while button_pressed:
-				flagella_mass=input_box.ask(screen,"flagella_mass")
+				flagella_mass=ask(screen,"flagella_mass")
 				button_pressed=False
 			
 			draw_cell(organelle_list,[0.5*width, 0.5*height])
@@ -411,38 +438,15 @@ def gameloop():
 				if event.key == pygame.K_e:
 					editor = True
 		(dx, dy) = (0, 0)
-		mouse_pos = pygame.mouse.get_pos()
-		mouse_angle = math.atan2(mouse_pos[1] - cell_position[1], mouse_pos[0] - cell_position[0]) + math.pi/2
-		#this is where to add turning speed etc
-		global cell_angle
-		cell_angle = mouse_angle
-
-
-		#update the draw directions
-		rotation = np.array([[math.cos(cell_angle), -math.sin(cell_angle)], 
-							[math.sin(cell_angle), math.cos(cell_angle)]])
-
-		
-		Up=rotation.dot(Up_0)
-		Down=rotation.dot(Down_0)
-		Up_Right=rotation.dot(Up_Right_0)
-		Up_Left=rotation.dot(Up_Left_0)
-		Down_Right=rotation.dot(Down_Right_0)
-		Down_Left=rotation.dot(Down_Left_0)
-
 		keys = pygame.key.get_pressed()
 		if keys[pygame.K_w]:
-			dy-=math.cos(cell_angle)*speed_w
-			dx+=math.sin(cell_angle)*speed_w 
+			dy-=speed_w
 		if keys[pygame.K_s]:
-			dy+=math.cos(cell_angle)*speed_s
-			dx-=math.sin(cell_angle)*speed_s 
+			dy+=speed_s
 		if keys[pygame.K_d]:
-			dx+=math.cos(cell_angle)*speed_d
-			dy+=math.sin(cell_angle)*speed_d
+			dx+=speed_d
 		if keys[pygame.K_a]:
-			dx-=math.cos(cell_angle)*speed_a
-			dy-=math.sin(cell_angle)*speed_a
+			dx-=speed_a
 		
 		if((cell_position[0]>width and dx>0) or (cell_position[0]<0 and dx<0)):
 			dx=0
