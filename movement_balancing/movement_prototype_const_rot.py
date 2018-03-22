@@ -245,7 +245,7 @@ def gameloop():
 	FPS=60
 	force_flagella=2.2 #force of each flagella
 
-	rate_of_turn = 0.5 #how fast should the cell turn?
+	rate_of_turn = 0.07 #how fast should the cell turn?
 
 	x_unit = math.sqrt(9)*hex_size/2
 	y_unit = math.sqrt(3)*hex_size/2
@@ -417,7 +417,6 @@ def gameloop():
 						num_flagella=0
 						weight=0
 						size=0
-						inertia=0
 						for organelle in organelle_list:
 							if organelle[0]=='Nucleus':
 								size+=7
@@ -456,36 +455,12 @@ def gameloop():
 						center_mass_x=center_mass_x/weight
 						center_mass_y=center_mass_y/weight
 
-						#Calculate inertia
-						for organelle in organelle_list:
-							if organelle[0]=='Nucleus':
-								inertia+=nucleus_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)
-								inertia+=0.5*nucleus_mass*7**2
-							elif organelle[0]=='Ribosomes':
-								inertia+=0.5*ribosome_mass*3
-								inertia+=ribosome_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)/3
-								inertia+=ribosome_mass*((organelle[1][0]+Up_Left[0]-center_mass_x)**2+(organelle[1][1]+Up_Left[1]-center_mass_y)**2)/3
-								inertia+=ribosome_mass*((organelle[1][0]+Up_Right[0]-center_mass_x)**2+(organelle[1][1]+Up_Right[1]-center_mass_y)**2)/3
-							elif organelle[0]=='Flagella':
-								inertia+=flagella_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)
-								inertia+=0.5*flagella_mass
-							elif organelle[0]=='Vacuole':
-								inertia+=vacuole_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)
-								inertia+=0.5*vacuole_mass
-							elif organelle[0]=='Cytoplasm':
-								inertia+=cytoplasm_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)
-								inertia+=0.5*cytoplasm_mass
-							elif organelle[0]=='Mitochondria':
-								inertia+=mitochondria_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)
-								inertia+=0.5*mitochondria_mass*2
-								
 						#y = 0.5/(1+size)
 						y = 0.1
 						x_w=0
 						x_a=0
 						x_d=0
 						x_s=0
-						torque=0
 						for flagella in flagella_list:
 							#normalised flagella forces, otherwise flagella further away add more force
 							flag_loc = np.array([center_mass_x,center_mass_y])-flagella
@@ -495,7 +470,6 @@ def gameloop():
 							x_s+=np.abs(max(float(force_dir[1]),0))
 							x_a+=np.abs(min(float(force_dir[0]),0))
 							x_d+=np.abs(max(float(force_dir[0]),0))
-							torque+=np.sqrt((flag_loc[0]**2+flag_loc[1]**2))*force_flagella
 						
 						speed_w=global_top_speed*((1-y)*sigmoid(15*(x_w-0.33))+y)
 						speed_a=global_top_speed*((1-y)*sigmoid(15*(x_a-0.33))+y)
@@ -525,7 +499,7 @@ def gameloop():
 			turn -= math.pi*2
 		#add some amount of the turn
 		if editor == False:
-			cell_angle += rate_of_turn*(turn)*(torque/(inertia+size)+y/10)
+			cell_angle += rate_of_turn*(turn)
 
 		#keep angle in the right range
 		if cell_angle < -math.pi:
