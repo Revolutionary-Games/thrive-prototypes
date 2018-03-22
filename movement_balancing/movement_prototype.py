@@ -9,25 +9,32 @@ snap to hex grid when placing new elements
 '''
 #Constants
 hex_size=15
-global_top_speed=10
-cytoplasm_mass=1
-nucleus_mass=7
-mitochondria_mass=2
-vacuole_mass=1
-ribosome_mass=3
-flagella_mass=0.5
-FPS=60
-force_flagella=0.1
+#global_top_speed=10
+#cytoplasm_mass=1
+#nucleus_mass=7
+#mitochondria_mass=2
+#vacuole_mass=1
+#ribosome_mass=3
+#flagella_mass=0.5
+#FPS=60
+#force_flagella=0.1
 
 #Hex moving
-x_unit = math.sqrt(9)*hex_size/2
-y_unit = math.sqrt(3)*hex_size/2
-Up=np.array([0,-2*y_unit])
-Down=np.array([0,2*y_unit])
-Up_Right=np.array([x_unit,-y_unit])
-Up_Left=np.array([-x_unit,-y_unit])
-Down_Right=np.array([x_unit,y_unit])
-Down_Left=np.array([-x_unit,y_unit])
+Up_0=np.array([0,-1*math.sqrt(3)*hex_size])
+Down_0=np.array([0,math.sqrt(3)*hex_size])
+Up_Right_0=np.array([math.sqrt(9)*hex_size/2,-1*math.sqrt(3)*hex_size/2])
+Up_Left_0=np.array([-1*math.sqrt(9)*hex_size/2,-1*math.sqrt(3)*hex_size/2])
+Down_Right_0=np.array([math.sqrt(9)*hex_size/2,math.sqrt(3)*hex_size/2])
+Down_Left_0=np.array([-1*math.sqrt(9)*hex_size/2,math.sqrt(3)*hex_size/2])
+
+Up=np.array([0,-1*math.sqrt(3)*hex_size])
+Down=np.array([0,math.sqrt(3)*hex_size])
+Up_Right=np.array([math.sqrt(9)*hex_size/2,-1*math.sqrt(3)*hex_size/2])
+Up_Left=np.array([-1*math.sqrt(9)*hex_size/2,-1*math.sqrt(3)*hex_size/2])
+Down_Right=np.array([math.sqrt(9)*hex_size/2,math.sqrt(3)*hex_size/2])
+Down_Left=np.array([-1*math.sqrt(9)*hex_size/2,math.sqrt(3)*hex_size/2])
+
+cell_angle = 0
 
 #window setup
 background_color = (0,0,0)
@@ -185,8 +192,10 @@ def num_button(color1, color2, x, y, width, height, var, varname):
 	text_to_button(string,black,x,y,width,height)		
 	
 def draw_cell(organelle_list,position):
+	pygame.draw.circle(screen, [0,0,255], (int(position[0]), int(position[1])), 3)
 	for organelle in organelle_list:
-		rel_pos = np.array([organelle[1][0],organelle[1][1]])
+		rel_pos = np.array([math.cos(cell_angle)*organelle[1][0]  - math.sin(cell_angle)*organelle[1][1],
+							math.sin(cell_angle)*organelle[1][0] + math.cos(cell_angle)*organelle[1][1]])
 		if organelle[0]=='Nucleus':
 			draw_nucleus(position+rel_pos)
 		elif organelle[0]=='Ribosomes':
@@ -222,10 +231,11 @@ flagella_list = []
 clock = pygame.time.Clock()
 
 def gameloop():
+	global Up, Down, Up_Right, Up_Left, Down_Right, Down_Left, cell_angle
 	cell_position = np.array([0.5*width, 0.5*height])
 	#Constants
 	hex_size=15
-	global_top_speed=10
+	global_top_speed=8
 	cytoplasm_mass=1
 	nucleus_mass=7
 	mitochondria_mass=2
@@ -233,7 +243,8 @@ def gameloop():
 	ribosome_mass=3
 	flagella_mass=0.5
 	FPS=60
-	force_flagella=0.1
+	force_flagella=2.2 #force of each flagella
+	rate_of_turn = 0.5 #how fast should the cell turn?
 	x_unit = math.sqrt(9)*hex_size/2
 	y_unit = math.sqrt(3)*hex_size/2
 	(center_mass_x,center_mass_y)=(0,0)
@@ -388,6 +399,10 @@ def gameloop():
 			while button_pressed:
 				flagella_mass=ask(screen,"flagella_mass")
 				button_pressed=False
+			button_pressed = num_button((0,255,0),white,width-230,height-540,200,50,rate_of_turn,"rate_of_turn")
+			while button_pressed:
+				rate_of_turn=ask(screen,"rate_of_turn")
+				button_pressed=False
 			
 			draw_cell(organelle_list,[0.5*width, 0.5*height])
 			pygame.display.update()
@@ -400,6 +415,7 @@ def gameloop():
 						num_flagella=0
 						weight=0
 						size=0
+						inertia=0
 						for organelle in organelle_list:
 							if organelle[0]=='Nucleus':
 								size+=7
@@ -437,17 +453,39 @@ def gameloop():
 								center_mass_y+=organelle[1][1]*mitochondria_mass
 						center_mass_x=center_mass_x/weight
 						center_mass_y=center_mass_y/weight
-						y = 0.5/(1+size)
+						#Calculate inertia
+						for organelle in organelle_list:
+							if organelle[0]=='Nucleus':
+								inertia+=nucleus_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)
+							elif organelle[0]=='Ribosomes':
+								inertia+=ribosome_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)/3
+								inertia+=ribosome_mass*((organelle[1][0]+Up_Left[0]-center_mass_x)**2+(organelle[1][1]+Up_Left[1]-center_mass_y)**2)/3
+								inertia+=ribosome_mass*((organelle[1][0]+Up_Right[0]-center_mass_x)**2+(organelle[1][1]+Up_Right[1]-center_mass_y)**2)/3
+							elif organelle[0]=='Flagella':
+								inertia+=flagella_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)
+							elif organelle[0]=='Vacuole':
+								inertia+=vacuole_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)
+							elif organelle[0]=='Cytoplasm':
+								inertia+=cytoplasm_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)
+							elif organelle[0]=='Mitochondria':
+								inertia+=mitochondria_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)
+						#y = 0.5/(1+size)
+						y = 0.1
 						x_w=0
 						x_a=0
 						x_d=0
 						x_s=0
+						torque=0
 						for flagella in flagella_list:
-							force_dir = force_flagella*(np.array([center_mass_x,center_mass_y])-flagella)/weight
+							#normalised flagella forces, otherwise flagella further away add more force
+							flag_loc = np.array([center_mass_x,center_mass_y])-flagella
+							flag_loc_normalised = flag_loc/(math.sqrt(flag_loc[0]**2 + flag_loc[1]**2))
+							force_dir = force_flagella*(flag_loc_normalised)/weight
 							x_w+=np.abs(min(float(force_dir[1]),0))
 							x_s+=np.abs(max(float(force_dir[1]),0))
 							x_a+=np.abs(min(float(force_dir[0]),0))
 							x_d+=np.abs(max(float(force_dir[0]),0))
+							torque+=np.sqrt((flag_loc[0]**2+flag_loc[1]**2))*force_flagella
 						
 						speed_w=global_top_speed*((1-y)*sigmoid(15*(x_w-0.33))+y)
 						speed_a=global_top_speed*((1-y)*sigmoid(15*(x_a-0.33))+y)
@@ -463,17 +501,54 @@ def gameloop():
 				if event.key == pygame.K_ESCAPE:
 					running=False
 				if event.key == pygame.K_e:
+					cell_angle = 0
 					editor = True
 		
+		mouse_pos = pygame.mouse.get_pos()
+		mouse_angle = math.atan2(mouse_pos[1] - cell_position[1], mouse_pos[0] - cell_position[0]) + math.pi/2
+		#added smooth turning code
+		turn = mouse_angle - cell_angle
+		#keep all angles in [-pi, pi]
+		if turn < -math.pi:
+			turn += math.pi*2
+		if turn > math.pi:
+			turn -= math.pi*2
+		#add some amount of the turn
+		if editor == False:
+			cell_angle += rate_of_turn*(turn)*torque/inertia
+
+		#keep angle in the right range
+		if cell_angle < -math.pi:
+			cell_angle += math.pi*2
+		if cell_angle > math.pi:
+			cell_angle -= math.pi*2
+
+
+		#update the draw directions
+		rotation = np.array([[math.cos(cell_angle), -math.sin(cell_angle)], 
+							[math.sin(cell_angle), math.cos(cell_angle)]])
+
+		
+		Up=rotation.dot(Up_0)
+		Down=rotation.dot(Down_0)
+		Up_Right=rotation.dot(Up_Right_0)
+		Up_Left=rotation.dot(Up_Left_0)
+		Down_Right=rotation.dot(Down_Right_0)
+		Down_Left=rotation.dot(Down_Left_0)
+
 		keys = pygame.key.get_pressed()
 		if keys[pygame.K_w]:
-			dy+=speed_w
+			dy+=math.cos(cell_angle)*speed_w
+			dx-=math.sin(cell_angle)*speed_w 
 		if keys[pygame.K_s]:
-			dy-=speed_s
+			dy-=math.cos(cell_angle)*speed_s
+			dx+=math.sin(cell_angle)*speed_s 
 		if keys[pygame.K_d]:
-			dx-=speed_d
+			dx-=math.cos(cell_angle)*speed_d
+			dy-=math.sin(cell_angle)*speed_d
 		if keys[pygame.K_a]:
-			dx+=speed_a
+			dx+=math.cos(cell_angle)*speed_a
+			dy+=math.sin(cell_angle)*speed_a
 			
 		(dx,dy)=(dx % width, dy % height)
 		
