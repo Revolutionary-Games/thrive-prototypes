@@ -244,7 +244,11 @@ def gameloop():
 	flagella_mass=0.5
 	FPS=60
 	force_flagella=2.2 #force of each flagella
+<<<<<<< HEAD
 	rate_of_turn = 0.5 #how fast should the cell turn?
+=======
+	rate_of_turn = 0.07 #how fast should the cell turn?
+>>>>>>> 3be665d2d8a7142a938857ffee2a8b62502afaf8
 	x_unit = math.sqrt(9)*hex_size/2
 	y_unit = math.sqrt(3)*hex_size/2
 	(center_mass_x,center_mass_y)=(0,0)
@@ -453,6 +457,7 @@ def gameloop():
 								center_mass_y+=organelle[1][1]*mitochondria_mass
 						center_mass_x=center_mass_x/weight
 						center_mass_y=center_mass_y/weight
+<<<<<<< HEAD
 						#Calculate inertia
 						for organelle in organelle_list:
 							if organelle[0]=='Nucleus':
@@ -469,6 +474,8 @@ def gameloop():
 								inertia+=cytoplasm_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)
 							elif organelle[0]=='Mitochondria':
 								inertia+=mitochondria_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)
+=======
+>>>>>>> 3be665d2d8a7142a938857ffee2a8b62502afaf8
 						#y = 0.5/(1+size)
 						y = 0.1
 						x_w=0
@@ -515,7 +522,11 @@ def gameloop():
 			turn -= math.pi*2
 		#add some amount of the turn
 		if editor == False:
+<<<<<<< HEAD
 			cell_angle += rate_of_turn*(turn)*torque/inertia
+=======
+			cell_angle += rate_of_turn*(turn)
+>>>>>>> 3be665d2d8a7142a938857ffee2a8b62502afaf8
 
 		#keep angle in the right range
 		if cell_angle < -math.pi:
