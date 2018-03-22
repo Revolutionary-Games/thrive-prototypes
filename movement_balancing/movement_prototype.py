@@ -519,7 +519,7 @@ def gameloop():
 			turn -= math.pi*2
 		#add some amount of the turn
 		if editor == False:
-			cell_angle += rate_of_turn*(turn)*torque/inertia
+			cell_angle += rate_of_turn*(turn)*(torque/(inertia+size)+y/10)
 
 		#keep angle in the right range
 		if cell_angle < -math.pi:
