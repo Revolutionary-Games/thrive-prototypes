@@ -519,12 +519,7 @@ def gameloop():
 			turn -= math.pi*2
 		#add some amount of the turn
 		if editor == False:
-
 			cell_angle += rate_of_turn*(turn)*torque/inertia
-'''
-			cell_angle += rate_of_turn*(turn)
-'''
-
 
 		#keep angle in the right range
 		if cell_angle < -math.pi:
@@ -536,7 +531,6 @@ def gameloop():
 		#update the draw directions
 		rotation = np.array([[math.cos(cell_angle), -math.sin(cell_angle)], 
 							[math.sin(cell_angle), math.cos(cell_angle)]])
-
 		
 		Up=rotation.dot(Up_0)
 		Down=rotation.dot(Down_0)
