@@ -10,7 +10,7 @@ import sort_cells as s_c
 
 background_colour = (255,255,255)
 (WIDTH, HEIGHT) = (1000, 600)
-num_cells=15
+num_cells=random.randint(5,40)
 Hooke_constant = 4
 spring_damp = 2
 pressure_coefficient = 3
@@ -36,15 +36,16 @@ def sign(a):
 		return 0
 
 class cell:
-	def __init__(self, parent, location):
+	def __init__(self, parent, location, mass):
 		self.x = location[0]
 		self.y = location[1]
-		self.colour = [255,0,0]
 		self.forces = [0,0]
 		self.v = [0,0]
-		self.amplitude = 4#random.uniform(2,4)
-		self.frequency = 4
-		self.offset = math.pi*2*(WIDTH - self.x)/WIDTH#0 to 2 pi
+		self.amplitude = 8*random.random()
+		self.frequency = 8*random.random()
+		self.offset = math.pi*2*random.random()
+		self.mass=mass
+		self.colour = [255/2*self.mass,0,0]
 
 	def draw(self):
 		pygame.draw.circle(screen, self.colour, [int(self.x), int(self.y)], 10)
@@ -107,50 +108,7 @@ class chamber:
 	
 	def draw(self,color):
 		pygame.draw.circle(screen, color, [self.x, self.y], 10)
-	#The functions below here are in place to ensure the cells are in the correct order so as to avoid intersection	
-	def find_leftmost_point(self):
-		leftmost_point = None
-		leftmost_x = None
-		for Cell in self.cells:
-			x = Cell.x
-			if leftmost_x == None or x < leftmost_x:
-				leftmost_x = x
-				leftmost_point = Cell
-		return leftmost_point
-
-	def find_rightmost_point(self):
-		rightmost_point = None
-		rightmost_x = None
-		for Cell in self.cells:
-			x = Cell.x
-			if rightmost_x == None or x > rightmost_x:
-				rightmost_x = x
-				rightmost_point = Cell
-		return rightmost_point
-
-	def is_point_above_the_line(self, point, line_points):
-		slope = (line_points[1].y-line_points[0].y)/(line_points[1].x-line_points[0].x)
-		y=slope*point.x+(line_points[0].y-slope*line_points[0].x)
-		return point.y-y
-
-	def sort_array_into_A_B_C(self, line_points):
-		A_array, B_array, C_array = [], [], []
-		for Cell in self.cells:
-			xp = self.is_point_above_the_line(Cell, line_points)
-			if xp < 0:
-				A_array.append(Cell)
-			elif xp > 0:
-				B_array.append(Cell)
-			elif xp == 0:
-				C_array.append(Cell)
-		return A_array, B_array, C_array
-
-	def sort_and_merge_A_B_C_arrays(self, A_array, B_array, C_array):
-		A_C_array = A_array + C_array
-		sorted(A_C_array,key=lambda cell: cell.x)
-		sorted(B_array,key=lambda cell: cell.x, reverse=True)        
-		self.cells = A_C_array + B_array
-		
+	
 def merge_chambers(parent,a,b,rem):
 	#Something might be off here but I can't put my finger on it
 	cells=[]
@@ -192,7 +150,9 @@ class creature:
 		self.edges2=[]
 
 		for i in range(num_cells):
-			self.cells.append(cell(self,(int(self.location[0] + random.randint(-200,200)),int(self.location[1] + random.randint(-200,200)))))
+			self.cells.append(cell(self,
+			(int(self.location[0] + random.randint(-200,200)),int(self.location[1] + random.randint(-200,200))),
+			0.5+(1.5)*random.random()))
 
 		#if the cells are too close move them a litte
 		done = False
@@ -265,7 +225,7 @@ class creature:
 			for ch in self.chambers:
 				if Edge.nodes[0] in ch.cells and Edge.nodes[1] in ch.cells:
 					adj_chamb+=1
-			if adj_chamb==1:
+			if adj_chamb<2:
 				self.external_edges.append(Edge)
 
 	def move(self):
@@ -326,10 +286,10 @@ class creature:
 				Cell.forces[1]-=n_force_mag*normal_dir[1]/(dist*2)
 			
 		for Cell in self.cells:
-			Cell.v[0]+=Cell.forces[0]*deltat
-			Cell.v[1]+=Cell.forces[1]*deltat
-			Cell.x += (Cell.forces[0])*.5*deltat**2
-			Cell.y += (Cell.forces[1])*.5*deltat**2
+			Cell.v[0]+=Cell.forces[0]*deltat/Cell.mass
+			Cell.v[1]+=Cell.forces[1]*deltat/Cell.mass
+			Cell.x += Cell.forces[0]*.5*deltat**2/Cell.mass
+			Cell.y += Cell.forces[1]*.5*deltat**2/Cell.mass
 		
 	def draw(self):
 		for Cell in self.cells:
