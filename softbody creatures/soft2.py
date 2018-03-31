@@ -4,6 +4,7 @@ import random
 from scipy.spatial import Delaunay
 import numpy
 from operator import itemgetter
+import sort_cells as s_c
 
 #setup
 
@@ -66,11 +67,17 @@ class chamber:
 		elif len(vertices)<len(edges):
 			print("Error: Chamber edges > vertices: ", len(edges), " > ", len(vertices))
 		self.cells = vertices
-		lm = self.find_leftmost_point()
-		rm = self.find_rightmost_point()
-		line_points = [lm,rm]
-		A_array, B_array, C_array = self.sort_array_into_A_B_C(line_points)
-		self.sort_and_merge_A_B_C_arrays(A_array, B_array, C_array)
+		array=[]
+		for Cell in self.cells:
+			array.append([Cell.x,Cell.y])
+		crt = s_c.Create_random_polygon(array)
+		polygon_array = crt.main()
+		reordered_cells=[0]*len(self.cells)
+		for i in range(len(self.cells)):
+			for j in range(len(self.cells)):
+				if self.cells[i].x==polygon_array[j][0] and self.cells[i].y==polygon_array[j][1]:
+					reordered_cells[j]=self.cells[i]
+		self.cells=reordered_cells
 		self.edges = edges
 		self.signed_volume = self.compute_volume()
 		self.initial_volume = math.fabs(self.signed_volume)
