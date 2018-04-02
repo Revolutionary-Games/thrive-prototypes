@@ -87,7 +87,6 @@ class Create_random_polygon:
 
     def main(self):
         'First output is random polygon coordinates array (other stuff for ploting)'
-        print(self.array)
         if self.array == None:
             if not all(
                 [isinstance(min_rand_coord, int),
@@ -98,7 +97,6 @@ class Create_random_polygon:
             else:                
                 self.array = self.generate_random_points()            
 
-        print(self.array)
         x_lm, y_lm = self.find_leftmost_point()
         x_rm, y_rm = self.find_rightmost_point()
         line_points = [(x_lm, y_lm), (x_rm, y_rm)]
