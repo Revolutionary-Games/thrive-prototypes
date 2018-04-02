@@ -45,7 +45,7 @@ class cell:
 		self.frequency = 8*random.random()
 		self.offset = math.pi*2*random.random()
 		self.mass=mass
-		self.colour = [255/2*self.mass,0,0]
+		self.colour = [255-255/2*self.mass,0,0]
 
 	def draw(self):
 		pygame.draw.circle(screen, self.colour, [int(self.x), int(self.y)], 10)
@@ -169,10 +169,15 @@ class creature:
 
 			if not found or counter >= 100000:
 				done = True
-		
+		self.x=0.0
+		self.y=0.0
 		#convert cells to points
 		for Cell in self.cells:
+			self.x+=Cell.x
+			self.y+=Cell.y
 			self.points.append([Cell.x,Cell.y])
+		self.x/=len(self.cells)
+		self.y/=len(self.cells)
 		
 		#build Delaunay Triangulization
 		tri = Delaunay(self.points)
@@ -180,9 +185,25 @@ class creature:
 			e1 = edge(self.cells[elm[0]],self.cells[elm[1]])
 			e2 = edge(self.cells[elm[2]],self.cells[elm[1]])
 			e3 = edge(self.cells[elm[0]],self.cells[elm[2]])
-			self.edges.append(e1)
-			self.edges.append(e2)
-			self.edges.append(e3)
+			e1_app=True
+			e2_app=True
+			e3_app=True
+			for E in self.edges:
+				if e1.nodes[0]==E.nodes[1] and e1.nodes[1]==E.nodes[0]:
+					e1 = E
+					e1_app=False
+				if e2.nodes[0]==E.nodes[1] and e2.nodes[1]==E.nodes[0]:
+					e2 = E
+					e2_app=False
+				if e3.nodes[0]==E.nodes[1] and e3.nodes[1]==E.nodes[0]:
+					e3 = E
+					e3_app=False
+			if e1_app:		
+				self.edges.append(e1)
+			if e2_app:
+				self.edges.append(e2)
+			if e3_app:
+				self.edges.append(e3)
 			vertices=(self.cells[elm[0]],self.cells[elm[1]],self.cells[elm[2]])
 			self.chambers.append(chamber(vertices,(e1,e2,e3)))
 		
@@ -285,11 +306,18 @@ class creature:
 				Cell.forces[0]-=n_force_mag*normal_dir[0]/(dist*2)
 				Cell.forces[1]-=n_force_mag*normal_dir[1]/(dist*2)
 			
+		self.x=0.0
+		self.y=0.0
 		for Cell in self.cells:
 			Cell.v[0]+=Cell.forces[0]*deltat/Cell.mass
 			Cell.v[1]+=Cell.forces[1]*deltat/Cell.mass
 			Cell.x += Cell.forces[0]*.5*deltat**2/Cell.mass
 			Cell.y += Cell.forces[1]*.5*deltat**2/Cell.mass
+			self.x+=Cell.x
+			self.y+=Cell.y
+			
+		self.x/=len(self.cells)
+		self.y/=len(self.cells)
 		
 	def draw(self):
 		for Cell in self.cells:
@@ -298,11 +326,12 @@ class creature:
 			Edge.draw([0,0,0])
 		for Edge in self.external_edges:
 			Edge.draw([0,255,0])
-		for Chamber in self.chambers:
-			Chamber.draw([random.randint(0,200),random.randint(0,200),random.randint(0,200)])
+		for Ch in self.chambers:
+			Ch.draw([200,0,200])
 
 worm = creature()
-			
+startx=worm.x
+starty=worm.y
 running=True
 while running:
 	screen.fill(background_colour)
@@ -316,6 +345,7 @@ while running:
 				worm = creature()
 	worm.move()
 	worm.draw()
+	travel_dist=(worm.x-startx)**2+(worm.y-starty)**2
 	pygame.display.update()
 	t+=deltat
 	clock.tick(FPS)
