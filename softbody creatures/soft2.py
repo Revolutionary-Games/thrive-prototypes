@@ -11,11 +11,11 @@ import sort_cells as s_c
 background_colour = (255,255,255)
 (WIDTH, HEIGHT) = (1000, 600)
 num_cells=random.randint(5,40)
-Hooke_constant = 4
-spring_damp = 2
-pressure_coefficient = 3
-drag_t = 5
-drag_n = 5
+Hooke_constant = 18
+spring_damp = 4
+pressure_coefficient = 12
+drag_t = 0.003
+drag_n = 0.003
 t=0
 FPS=30
 deltat=1./FPS
@@ -34,6 +34,35 @@ def sign(a):
 		return -1
 	else:
 		return 0
+		
+def did_collide(p_i, p_f, Edge):
+	xdiff = (p_i[0] - p_f[0], Edge.nodes[0].x - Edge.nodes[1].x)
+	ydiff = (p_i[1] - p_f[1], Edge.nodes[0].y - Edge.nodes[1].y)
+
+	def det(a, b):
+		return a[0] * b[1] - a[1] * b[0]
+
+	div = det(xdiff, ydiff)
+	if div == 0:
+		return False
+	else:
+		d = (det((p_i[0],p_i[1]),(p_f[0],p_f[1])), det((Edge.nodes[0].x,Edge.nodes[0].y),(Edge.nodes[1].x,Edge.nodes[1].y)))
+		x = det(d, xdiff) / div
+		y = det(d, ydiff) / div
+		if (Edge.nodes[0].x < x < Edge.nodes[1].x or Edge.nodes[1].x < x < Edge.nodes[0].x) and (Edge.nodes[0].y < y < Edge.nodes[1].y or Edge.nodes[1].y < y < Edge.nodes[0].y):
+			return True
+
+def elastic_collide(p_i,p_f,Edge):
+	a = Edge.nodes[0]
+	b = Edge.nodes[1]
+	dist = distance(a,b)
+	normal_dir = (-(b.y-a.y)/dist,(b.x-a.x)/dist)
+	tangential_dir = (normal_dir[1],-normal_dir[0])
+	v = (p_f[0]-p_i[0],p_f[1]-p_i[1])
+	normal_v = (v[0]*normal_dir[0],v[1]*normal_dir[1])
+	tangential_v = (v[0]*tangential_dir[0],v[1]*tangential_dir[1])
+	return (p_i[0]+tangential_v[0]-normal_v[0],p_i[1]+tangential_v[1]-normal_v[1])
+	
 
 class cell:
 	def __init__(self, parent, location, mass):
@@ -41,11 +70,11 @@ class cell:
 		self.y = location[1]
 		self.forces = [0,0]
 		self.v = [0,0]
-		self.amplitude = 8*random.random()
-		self.frequency = 8*random.random()
-		self.offset = math.pi*2*random.random()
-		self.mass=mass
-		self.colour = [255-255/2*self.mass,0,0]
+		self.amplitude = 3
+		self.frequency = 1.5
+		self.offset = math.pi*2*(HEIGHT - self.y)/HEIGHT
+		self.mass=9*random.random()+1
+		self.colour = [255-255*self.mass/10,0,0]
 
 	def draw(self):
 		pygame.draw.circle(screen, self.colour, [int(self.x), int(self.y)], 10)
@@ -222,8 +251,6 @@ class creature:
 					print('number of adjacent chambers = ',len(adj_chamb))
 					if len(adj_chamb)==2:
 						merge_chambers(self,adj_chamb[0],adj_chamb[1],Edge)
-					#if len(adj_chamb)==1:
-					#	self.chambers.remove(adj_chamb[0])
 					break
 			if not removed:
 				self.edges2.append(Edge)		
@@ -293,26 +320,31 @@ class creature:
 			a=Edge.nodes[0]
 			b=Edge.nodes[1]
 			dist = distance(a,b)
-			normal_dir = [-(a.y-a.y),(b.x-b.x)]
+			normal_dir = [-(b.y-a.y)/dist,(b.x-a.x)/dist]
 			tangential_dir = [normal_dir[1],-normal_dir[0]]
 			v = [(a.v[0]+b.v[0])/2,(a.v[1]+b.v[1])/2]
 			normal_v = v[0]*normal_dir[0]+v[1]*normal_dir[1]
 			tangential_v = v[0]*tangential_dir[0]+v[1]*tangential_dir[1]
-			t_force_mag=drag_t*sign(tangential_v)*tangential_v**2
-			n_force_mag=drag_n*sign(normal_v)*normal_v**2
+			t_force_mag=drag_t*sign(tangential_v)*tangential_v*dist
+			n_force_mag=drag_n*sign(normal_v)*normal_v*dist
 			for Cell in Edge.nodes:
-				Cell.forces[0]-=t_force_mag*tangential_dir[0]/(dist*2)
-				Cell.forces[1]-=t_force_mag*tangential_dir[1]/(dist*2)
-				Cell.forces[0]-=n_force_mag*normal_dir[0]/(dist*2)
-				Cell.forces[1]-=n_force_mag*normal_dir[1]/(dist*2)
+				Cell.forces[0]-=t_force_mag*tangential_dir[0]/2
+				Cell.forces[1]-=t_force_mag*tangential_dir[1]/2
+				Cell.forces[0]-=n_force_mag*normal_dir[0]/2
+				Cell.forces[1]-=n_force_mag*normal_dir[1]/2
 			
 		self.x=0.0
 		self.y=0.0
 		for Cell in self.cells:
 			Cell.v[0]+=Cell.forces[0]*deltat/Cell.mass
 			Cell.v[1]+=Cell.forces[1]*deltat/Cell.mass
-			Cell.x += Cell.forces[0]*.5*deltat**2/Cell.mass
-			Cell.y += Cell.forces[1]*.5*deltat**2/Cell.mass
+			p_i = (Cell.x,Cell.y)
+			p_f = (Cell.x + Cell.forces[0]*.5*deltat**2/Cell.mass,Cell.y + Cell.forces[1]*.5*deltat**2/Cell.mass)
+			'''for Edge in self.edges:
+				if did_collide(p_i,p_f,Edge) and Cell not in Edge.nodes:
+					p_f = elastic_collide(p_i,p_f,Edge)'''
+			Cell.x = p_f[0]
+			Cell.y = p_f[1]
 			self.x+=Cell.x
 			self.y+=Cell.y
 			
