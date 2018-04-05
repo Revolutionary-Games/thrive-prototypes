@@ -17,7 +17,6 @@ myfont = pygame.font.SysFont("monospace", 20)
 
 clock = pygame.time.Clock()
 
-cell_speed = 3
 number_of_cells = 20
 
 def distance(a,b,x,y):
@@ -35,12 +34,15 @@ def normalise(a,b):
 
 class cell:
 	def __init__(self, max_str):
-		self.strength = random.randint(0,max_str)
+		self.strength = random.uniform(0,max_str)
 		self.x = random.randint(100,width - 100)
 		self.y = random.randint(100,height - 100)
 		self.dx = 0
 		self.dy = 0
 		self.angle = random.uniform(-3,3)
+		self.cell_speed = random.uniform(0,4)
+		self.aggression = random.randint(0,100)
+		self.perception = random.randint(25,100)
 
 	def update(self):
 		#move randomly
@@ -54,12 +56,13 @@ class cell:
 				if c.strength > self.strength:
 					cells.remove(self)
 			#if you can perceive another cell
-			elif distance(self.x, self.y, c.x, c.y) < 100:
+			elif distance(self.x, self.y, c.x, c.y) < self.perception:
 				#if you are stronger and want to eat them and are not scared
-				if self.strength >= 2*c.strength and hunting == True:
+				attack = self.aggression+100*(self.strength-c.strength)/self.strength
+				if attack>100 and hunting == True:
 					des_angle = math.atan2(-self.x + c.x, -self.y + c.y)
 				#if you are not strong enough run away and get scared
-				else:
+				elif attack<0:
 					hunting = False
 					des_angle = math.atan2(self.x - c.x, self.y - c.y)
 
@@ -84,8 +87,8 @@ class cell:
 
 		#update your velocity and position
 		self.dx, self.dy = normalise(self.d_x, self.d_y)
-		self.x += cell_speed*self.dx
-		self.y += cell_speed*self.dy
+		self.x += self.cell_speed*self.dx
+		self.y += self.cell_speed*self.dy
 		#check for boundary collision
 
 		if self.x > width:
@@ -99,10 +102,11 @@ class cell:
 
 
 	def draw(self):
-		colour = [10*self.strength, 255 - 10*self.strength, 0]
+		colour = [int(10*self.strength), int(255 - 10*self.strength), 0]
 		pygame.draw.circle(screen, colour, (int(self.x), int(self.y)), 15)
-		#textsurface = myfont.render(str(self.strength), True, [255,255,255])
-		#screen.blit(textsurface,(int(self.x - 10), int(self.y - 10)))
+		pygame.draw.circle(screen, colour, (int(self.x), int(self.y)), self.perception, 3)
+		textsurface = myfont.render(str(self.aggression), True, [0,0,0])
+		screen.blit(textsurface,(int(self.x - 10), int(self.y - 10)))
 		
 
 
