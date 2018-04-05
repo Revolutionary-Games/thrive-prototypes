@@ -5,8 +5,11 @@ from pygame.locals import *
 import math
 
 ''' THINGS STILL TO DO
-snap to hex grid when placing new elements
+Fix mitochondria rotation
+Rotate Ribosomes
+Experiment with Cilia
 '''
+
 #Constants
 hex_size=15
 #global_top_speed=10
@@ -22,17 +25,17 @@ hex_size=15
 #Hex moving
 Up_0=np.array([0,-1*math.sqrt(3)*hex_size])
 Down_0=np.array([0,math.sqrt(3)*hex_size])
-Up_Right_0=np.array([math.sqrt(9)*hex_size/2,-1*math.sqrt(3)*hex_size/2])
-Up_Left_0=np.array([-1*math.sqrt(9)*hex_size/2,-1*math.sqrt(3)*hex_size/2])
-Down_Right_0=np.array([math.sqrt(9)*hex_size/2,math.sqrt(3)*hex_size/2])
-Down_Left_0=np.array([-1*math.sqrt(9)*hex_size/2,math.sqrt(3)*hex_size/2])
+Up_Right_0=np.array([3*hex_size/2,-1*math.sqrt(3)*hex_size/2])
+Up_Left_0=np.array([-1*3*hex_size/2,-1*math.sqrt(3)*hex_size/2])
+Down_Right_0=np.array([3*hex_size/2,math.sqrt(3)*hex_size/2])
+Down_Left_0=np.array([-1*3*hex_size/2,math.sqrt(3)*hex_size/2])
 
 Up=np.array([0,-1*math.sqrt(3)*hex_size])
 Down=np.array([0,math.sqrt(3)*hex_size])
-Up_Right=np.array([math.sqrt(9)*hex_size/2,-1*math.sqrt(3)*hex_size/2])
-Up_Left=np.array([-1*math.sqrt(9)*hex_size/2,-1*math.sqrt(3)*hex_size/2])
-Down_Right=np.array([math.sqrt(9)*hex_size/2,math.sqrt(3)*hex_size/2])
-Down_Left=np.array([-1*math.sqrt(9)*hex_size/2,math.sqrt(3)*hex_size/2])
+Up_Right=np.array([3*hex_size/2,-1*math.sqrt(3)*hex_size/2])
+Up_Left=np.array([-1*3*hex_size/2,-1*math.sqrt(3)*hex_size/2])
+Down_Right=np.array([3*hex_size/2,math.sqrt(3)*hex_size/2])
+Down_Left=np.array([-1*3*hex_size/2,math.sqrt(3)*hex_size/2])
 
 cell_angle = 0
 
@@ -42,7 +45,7 @@ black = background_color
 white = (255,255,255)
 editor_background_color = (55,55,55)
 (width, height) = (1000, 600)
-screen = pygame.display.set_mode((width, height))#,pygame.FULLSCREEN)
+screen = pygame.display.set_mode((width, height))
 screen.fill(background_color)
 
 def get_key():
@@ -132,11 +135,27 @@ def draw_mitochondria(position,tilt):
 	elif tilt==120:
 		draw_hex(color,position+Down_Right)
 
-def draw_ribosomes(position):
+def draw_ribosomes(position,tilt):
 	color = [255,140,0]
 	draw_hex(color,position)
-	draw_hex(color,position+Up_Left)
-	draw_hex(color,position+Up_Right)
+	if tilt == 0:
+		draw_hex(color,position+Up_Left)
+		draw_hex(color,position+Up_Right)
+	elif tilt == 1:
+		draw_hex(color,position+Up)
+		draw_hex(color,position+Down_Right)
+	elif tilt == 2:
+		draw_hex(color,position+Up_Right)
+		draw_hex(color,position+Down)
+	elif tilt == 3:
+		draw_hex(color,position+Down_Right)
+		draw_hex(color,position+Down_Left)
+	elif tilt == 4:
+		draw_hex(color,position+Down)
+		draw_hex(color,position+Up_Left)
+	elif tilt == 5:
+		draw_hex(color,position+Down_Left)
+		draw_hex(color,position+Up)
 
 def draw_flagella(position):
 	color = [255,255,255]
@@ -150,7 +169,7 @@ def adjust_tilt(tilt):
 	else:
 		return 0
 
-def draw_element(string, position, click):
+def draw_element(string, position,tilt):
 	if string=='Flagella':
 		draw_flagella(position)
 	elif string=='Vacuole':
@@ -158,15 +177,11 @@ def draw_element(string, position, click):
 	elif string=='Cytoplasm':
 		draw_cytoplasm(position)
 	elif string=='Mitochondria':
-		tilt=0
-		if click[2]:
-			tilt=adjust_tilt(tilt)
 		draw_mitochondria(position,tilt)
-		return tilt
 	elif string=='Nucleus':
 		draw_nucleus(position)
 	elif string=='Ribosomes':
-		draw_ribosomes(position)
+		draw_ribosomes(position,tilt)
 		
 def org_button(color1, color2, x, y, width, height,msg):
 	cur=pygame.mouse.get_pos()
@@ -199,7 +214,7 @@ def draw_cell(organelle_list,position):
 		if organelle[0]=='Nucleus':
 			draw_nucleus(position+rel_pos)
 		elif organelle[0]=='Ribosomes':
-			draw_ribosomes(position+rel_pos)
+			draw_ribosomes(position+rel_pos,organelle[2])
 		elif organelle[0]=='Flagella':
 			draw_flagella(position+rel_pos)
 		elif organelle[0]=='Vacuole':
@@ -220,13 +235,13 @@ def h_lines(dy,height,width,step):
 		y += dy
 		y = y % height
 		pygame.draw.line(screen, (0,191,255), (0,y), (width,y))
+		
+def distance(a,b):
+	return np.sqrt((a[0]-b[0])**2+(a[1]-b[1])**2)
 
-organelle_list =[]
-#[['Nucleus', [0, 0]],['Ribosomes', 2*Down],['Vacuole',2*Down+Down_Right],
-#['Mitochondria',2*Down+Down_Left,120],['Flagella',3*Down+Down_Left],['Flagella',3*Down+Down_Right]]
+organelle_list =[] #This will store all organelle
 
-flagella_list = []
-#[organelle_list[-1][1],organelle_list[-2][1]]
+flagella_list = [] #This specifically hold flagella since they matter more in this context
 
 clock = pygame.time.Clock()
 
@@ -237,10 +252,10 @@ def gameloop():
 	hex_size=15
 	global_top_speed=8
 	cytoplasm_mass=1
-	nucleus_mass=7
-	mitochondria_mass=2
-	vacuole_mass=1
-	ribosome_mass=3
+	nucleus_mass=10
+	mitochondria_mass=2.5
+	vacuole_mass=1.3
+	ribosome_mass=4
 	flagella_mass=0.5
 	FPS=60
 	force_flagella=2.2 #force of each flagella
@@ -258,9 +273,12 @@ def gameloop():
 		while editor:
 			screen.fill(black)
 			message_to_screen("Press ESC to leave editor",(255,0,0),(0,0))
+			message_to_screen("Remove organelle with R",(255,0,0),(width-230,0))
 			button_pressed=False
 			cell_position=np.array([0.5*width, 0.5*height])
+
 			button_pressed = org_button((0,255,0), white, 10, height-250, 120, 50, "Mitochondria")
+			tilt=0
 			while button_pressed:
 				screen.fill(black)
 				message_to_screen("Press ESC to leave editor",(255,0,0),(0,0))
@@ -268,7 +286,7 @@ def gameloop():
 				draw_cell(organelle_list,cell_position)
 				cur=pygame.mouse.get_pos()-cell_position
 				org_pos=(round(cur[0]/x_unit)*x_unit+cell_position[0],round(cur[1]/y_unit)*y_unit+cell_position[1])
-				tilt=draw_element("Mitochondria",org_pos,pygame.mouse.get_pressed())
+				draw_element("Mitochondria",org_pos,tilt)
 				pygame.display.update()
 				for event in pygame.event.get():
 					if event.type == KEYDOWN:
@@ -277,7 +295,8 @@ def gameloop():
 							button_pressed=False
 						elif event.key == pygame.K_ESCAPE:
 							button_pressed = False
-							
+					elif event.type == pygame.MOUSEBUTTONDOWN:
+						tilt=adjust_tilt(tilt)							
 			button_pressed=org_button((0,255,0), white, 10, height-70, 120, 50, "Vacuole")
 			while button_pressed:
 				screen.fill(black)
@@ -286,7 +305,7 @@ def gameloop():
 				draw_cell(organelle_list,cell_position)
 				cur=pygame.mouse.get_pos()-cell_position
 				org_pos=(round(cur[0]/x_unit)*x_unit+cell_position[0],round(cur[1]/y_unit)*y_unit+cell_position[1])
-				draw_element("Vacuole",org_pos,pygame.mouse.get_pressed())
+				draw_element("Vacuole",org_pos,0)
 				pygame.display.update()
 				for event in pygame.event.get():
 					if event.type == KEYDOWN:
@@ -304,7 +323,7 @@ def gameloop():
 				draw_cell(organelle_list,cell_position)
 				cur=pygame.mouse.get_pos()-cell_position
 				org_pos=(round(cur[0]/x_unit)*x_unit+cell_position[0],round(cur[1]/y_unit)*y_unit+cell_position[1])
-				draw_element("Flagella",org_pos,pygame.mouse.get_pressed())
+				draw_element("Flagella",org_pos,0)
 				pygame.display.update()
 				for event in pygame.event.get():
 					if event.type == KEYDOWN:
@@ -322,7 +341,7 @@ def gameloop():
 				draw_cell(organelle_list,cell_position)
 				cur=pygame.mouse.get_pos()-cell_position
 				org_pos=(round(cur[0]/x_unit)*x_unit+cell_position[0],round(cur[1]/y_unit)*y_unit+cell_position[1])
-				draw_element("Cytoplasm",org_pos,pygame.mouse.get_pressed())
+				draw_element("Cytoplasm",org_pos,0)
 				message_to_screen("Press ENTER to place organelle",(255,0,0),(width-280,0))
 				pygame.display.update()
 				for event in pygame.event.get():
@@ -331,7 +350,7 @@ def gameloop():
 							organelle_list.append(["Cytoplasm",org_pos-cell_position])
 							button_pressed=False
 						elif event.key == pygame.K_ESCAPE:
-							button_pressed = False
+							button_pressed = False							
 							
 			button_pressed=org_button((0,255,0), white, 10, height-370, 120, 50, "Nucleus")
 			while button_pressed:
@@ -340,7 +359,7 @@ def gameloop():
 				draw_cell(organelle_list,cell_position)
 				cur=pygame.mouse.get_pos()-cell_position
 				org_pos=(round(cur[0]/x_unit)*x_unit+cell_position[0],round(cur[1]/y_unit)*y_unit+cell_position[1])
-				draw_element("Nucleus",org_pos,pygame.mouse.get_pressed())
+				draw_element("Nucleus",org_pos,0)
 				message_to_screen("Press ENTER to place organelle",(255,0,0),(width-280,0))
 				pygame.display.update()
 				for event in pygame.event.get():
@@ -352,23 +371,26 @@ def gameloop():
 							button_pressed = False
 			
 			button_pressed=org_button((0,255,0), white, 10, height-310, 120, 50, "Ribosomes")
+			tilt=0
 			while button_pressed:
 				screen.fill(black)
 				message_to_screen("Press ESC to leave editor",(255,0,0),(0,0))
 				draw_cell(organelle_list,cell_position)
 				cur=pygame.mouse.get_pos()-cell_position
 				org_pos=(round(cur[0]/x_unit)*x_unit+cell_position[0],round(cur[1]/y_unit)*y_unit+cell_position[1])
-				draw_element("Ribosomes",org_pos,pygame.mouse.get_pressed())
+				draw_element("Ribosomes",org_pos,tilt)
 				message_to_screen("Press ENTER to place organelle",(255,0,0),(width-280,0))
 				pygame.display.update()
 				for event in pygame.event.get():
 					if event.type == KEYDOWN:
 						if event.key == pygame.K_RETURN:
-							organelle_list.append(["Ribosomes",org_pos-cell_position])
+							organelle_list.append(["Ribosomes",org_pos-cell_position,tilt])
 							button_pressed=False
 						elif event.key == pygame.K_ESCAPE:
 							button_pressed = False
-							
+					elif event.type == pygame.MOUSEBUTTONDOWN:
+						tilt+=1
+						tilt = tilt % 6
 			button_pressed = num_button((0,255,0),white,width-230,height-120,200,50,force_flagella,"force_flagella")
 			while button_pressed:
 				force_flagella=ask(screen,"force_flagella")
@@ -412,6 +434,12 @@ def gameloop():
 				if event.type == pygame.QUIT:
 					running=False
 				elif event.type == KEYDOWN:
+					if event.key == pygame.K_r:
+						c_pos = pygame.mouse.get_pos()-cell_position
+						for org in organelle_list:
+							if distance(org[1],c_pos)<hex_size:
+								organelle_list.remove(org)
+								break
 					if event.key == pygame.K_ESCAPE:
 						cell_position = np.array([0.5*width, 0.5*height])
 						num_flagella=0
@@ -429,10 +457,37 @@ def gameloop():
 								weight+=ribosome_mass
 								center_mass_x+=organelle[1][0]*ribosome_mass/3
 								center_mass_y+=organelle[1][1]*ribosome_mass/3
-								center_mass_x+=(organelle[1]+Up_Left)[0]*ribosome_mass/3
-								center_mass_y+=(organelle[1]+Up_Left)[1]*ribosome_mass/3
-								center_mass_x+=(organelle[1]+Up_Right)[0]*ribosome_mass/3
-								center_mass_y+=(organelle[1]+Up_Right)[1]*ribosome_mass/3
+								tilt = organelle[2]
+								if tilt == 0:
+									center_mass_x+=(organelle[1]+Up_Left)[0]*ribosome_mass/3
+									center_mass_y+=(organelle[1]+Up_Left)[1]*ribosome_mass/3
+									center_mass_x+=(organelle[1]+Up_Right)[0]*ribosome_mass/3
+									center_mass_y+=(organelle[1]+Up_Right)[1]*ribosome_mass/3
+								elif tilt == 1:
+									center_mass_x+=(organelle[1]+Up)[0]*ribosome_mass/3
+									center_mass_y+=(organelle[1]+Up)[1]*ribosome_mass/3
+									center_mass_x+=(organelle[1]+Down_Right)[0]*ribosome_mass/3
+									center_mass_y+=(organelle[1]+Down_Right)[1]*ribosome_mass/3
+								elif tilt == 2:
+									center_mass_x+=(organelle[1]+Up_Right)[0]*ribosome_mass/3
+									center_mass_y+=(organelle[1]+Up_Right)[1]*ribosome_mass/3
+									center_mass_x+=(organelle[1]+Down)[0]*ribosome_mass/3
+									center_mass_y+=(organelle[1]+Down)[1]*ribosome_mass/3
+								elif tilt == 3:
+									center_mass_x+=(organelle[1]+Down_Left)[0]*ribosome_mass/3
+									center_mass_y+=(organelle[1]+Down_Left)[1]*ribosome_mass/3
+									center_mass_x+=(organelle[1]+Down_Right)[0]*ribosome_mass/3
+									center_mass_y+=(organelle[1]+Down_Right)[1]*ribosome_mass/3
+								elif tilt == 4:
+									center_mass_x+=(organelle[1]+Up_Left)[0]*ribosome_mass/3
+									center_mass_y+=(organelle[1]+Up_Left)[1]*ribosome_mass/3
+									center_mass_x+=(organelle[1]+Down)[0]*ribosome_mass/3
+									center_mass_y+=(organelle[1]+Down)[1]*ribosome_mass/3
+								elif tilt == 5:
+									center_mass_x+=(organelle[1]+Up)[0]*ribosome_mass/3
+									center_mass_y+=(organelle[1]+Up)[1]*ribosome_mass/3
+									center_mass_x+=(organelle[1]+Down_Left)[0]*ribosome_mass/3
+									center_mass_y+=(organelle[1]+Down_Left)[1]*ribosome_mass/3
 							elif organelle[0]=='Flagella':
 								num_flagella+=1
 								weight+=flagella_mass
@@ -451,8 +506,17 @@ def gameloop():
 							elif organelle[0]=='Mitochondria':
 								size+=2
 								weight+=mitochondria_mass
-								center_mass_x+=organelle[1][0]*mitochondria_mass
-								center_mass_y+=organelle[1][1]*mitochondria_mass
+								center_mass_x+=organelle[1][0]*mitochondria_mass/2
+								center_mass_y+=organelle[1][1]*mitochondria_mass/2
+								if organelle[2]==0:
+									center_mass_x+=(organelle[1][0]+Up[0])*mitochondria_mass/2
+									center_mass_y+=(organelle[1][1]+Up[1])*mitochondria_mass/2
+								elif organelle[2]==60:
+									center_mass_x+=(organelle[1][0]+Up_Right[0])*mitochondria_mass/2
+									center_mass_y+=(organelle[1][1]+Up_Right[1])*mitochondria_mass/2
+								elif organelle[2]==120:
+									center_mass_x+=(organelle[1][0]+Down_Right[0])*mitochondria_mass/2
+									center_mass_y+=(organelle[1][1]+Down_Right[1])*mitochondria_mass/2
 						center_mass_x=center_mass_x/weight
 						center_mass_y=center_mass_y/weight
 
@@ -462,10 +526,37 @@ def gameloop():
 								inertia+=nucleus_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)
 								inertia+=0.5*nucleus_mass*7**2
 							elif organelle[0]=='Ribosomes':
-								inertia+=0.5*ribosome_mass*3
 								inertia+=ribosome_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)/3
-								inertia+=ribosome_mass*((organelle[1][0]+Up_Left[0]-center_mass_x)**2+(organelle[1][1]+Up_Left[1]-center_mass_y)**2)/3
-								inertia+=ribosome_mass*((organelle[1][0]+Up_Right[0]-center_mass_x)**2+(organelle[1][1]+Up_Right[1]-center_mass_y)**2)/3
+								if organelle[2]==0:
+									p1 = organelle[1]+Up_Left
+									p2 = organelle[1]+Up_Right
+									inertia+=ribosome_mass*((p1[0]-center_mass_x)**2+(p1[1]-center_mass_y)**2)/3
+									inertia+=ribosome_mass*((p2[0]-center_mass_x)**2+(p2[1]-center_mass_y)**2)/3
+								elif organelle[2]==1:
+									p1 = organelle[1]+Up
+									p2 = organelle[1]+Down_Right
+									inertia+=ribosome_mass*((p1[0]-center_mass_x)**2+(p1[1]-center_mass_y)**2)/3
+									inertia+=ribosome_mass*((p2[0]-center_mass_x)**2+(p2[1]-center_mass_y)**2)/3
+								elif organelle[2]==2:
+									p1 = organelle[1]+Up_Right
+									p2 = organelle[1]+Down
+									inertia+=ribosome_mass*((p1[0]-center_mass_x)**2+(p1[1]-center_mass_y)**2)/3
+									inertia+=ribosome_mass*((p2[0]-center_mass_x)**2+(p2[1]-center_mass_y)**2)/3
+								elif organelle[2]==3:
+									p1 = organelle[1]+Down_Right
+									p2 = organelle[1]+Down_Left
+									inertia+=ribosome_mass*((p1[0]-center_mass_x)**2+(p1[1]-center_mass_y)**2)/3
+									inertia+=ribosome_mass*((p2[0]-center_mass_x)**2+(p2[1]-center_mass_y)**2)/3
+								elif organelle[2]==4:
+									p1 = organelle[1]+Down
+									p2 = organelle[1]+Up_Left
+									inertia+=ribosome_mass*((p1[0]-center_mass_x)**2+(p1[1]-center_mass_y)**2)/3
+									inertia+=ribosome_mass*((p2[0]-center_mass_x)**2+(p2[1]-center_mass_y)**2)/3
+								elif organelle[2]==5:
+									p1 = organelle[1]+Down_Left
+									p2 = organelle[1]+Up
+									inertia+=ribosome_mass*((p1[0]-center_mass_x)**2+(p1[1]-center_mass_y)**2)/3
+									inertia+=ribosome_mass*((p2[0]-center_mass_x)**2+(p2[1]-center_mass_y)**2)/3
 							elif organelle[0]=='Flagella':
 								inertia+=flagella_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)
 								inertia+=0.5*flagella_mass
@@ -476,8 +567,16 @@ def gameloop():
 								inertia+=cytoplasm_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)
 								inertia+=0.5*cytoplasm_mass
 							elif organelle[0]=='Mitochondria':
-								inertia+=mitochondria_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)
-								inertia+=0.5*mitochondria_mass*2
+								inertia+=mitochondria_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)/2
+								if organelle[2]==0:
+									pos = organelle[1]+Up
+									inertia+=mitochondria_mass*((pos[0]-center_mass_x)**2+(pos[1]-center_mass_y)**2)/2
+								elif organelle[2]==60:
+									pos = organelle[1]+Up_Right
+									inertia+=mitochondria_mass*((pos[0]-center_mass_x)**2+(pos[1]-center_mass_y)**2)/2
+								elif organelle[2]==120:
+									pos = organelle[1]+Down_Right
+									inertia+=mitochondria_mass*((pos[0]-center_mass_x)**2+(pos[1]-center_mass_y)**2)/2
 								
 						#y = 0.5/(1+size)
 						y = 0.1
@@ -510,7 +609,7 @@ def gameloop():
 			elif event.type == KEYDOWN:
 				if event.key == pygame.K_ESCAPE:
 					running=False
-				if event.key == pygame.K_e:
+				elif event.key == pygame.K_e:
 					cell_angle = 0
 					editor = True
 		
@@ -560,13 +659,6 @@ def gameloop():
 			dy+=math.sin(cell_angle)*speed_a
 			
 		(dx,dy)=(dx % width, dy % height)
-		
-		'''I decided to move the background instead of the cell'''
-		#if((cell_position[0]>width and dx>0) or (cell_position[0]<0 and dx<0)):
-		#	dx=0
-		#if((cell_position[1]>height and dy>0) or (cell_position[1]<0 and dy<0)):
-		#	dy=0
-		#cell_position = cell_position +np.array([dx, dy])
 		
 		speed_w_str = "speed_w = " + str(speed_w)
 		speed_a_str = "speed_a = " + str(speed_a)
