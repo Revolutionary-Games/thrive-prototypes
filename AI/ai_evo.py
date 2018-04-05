@@ -17,14 +17,16 @@ myfont = pygame.font.SysFont("monospace", 20)
 
 clock = pygame.time.Clock()
 
-start_number_of_cells = 8
-num_plants = 5
+start_number_of_cells = 10
+num_plants = 8
 max_number_of_cells = 20
 max_str = 20
 max_spd = 4
 max_view = 100
 min_reproduce_age = 2
 max_max_age = 30
+
+commie_balancing = 500
 
 FPS = 60
 
@@ -53,11 +55,23 @@ class cell:
 		self.aggression = stats[2]#random.randint(0,100)
 		self.perception = stats[3]#random.randint(25,100)
 		self.age = 0
-		self.max_age = stats[4]
-		self.reproduce_age = stats[5]
+		self.max_age = 5
+		self.reproduce_age = 2
 		if self.max_age < self.reproduce_age:
 			self.reproduce_age = min(self.max_age-2,min_reproduce_age)
 			self.max_age = max(self.max_age,min_reproduce_age+2)
+		power = 100*self.strength/max_str + self.aggression + self.perception + 100*self.max_age/max_max_age
+		power += (self.max_age-self.reproduce_age)/self.max_age*100 + 100*self.cell_speed/max_spd
+		scale = commie_balancing/power
+		if scale < 1:
+			self.strength = max(min(max_str, self.strength*scale),0)
+			self.cell_speed = max(min(max_spd, self.cell_speed*scale),0)
+			self.max_age = 5
+			self.aggression = max(min(100, self.aggression*scale),0)
+			self.reproduce_age = 2
+			self.perception = max(min(max_view, self.perception*scale),0)
+		if self.strength == 0:
+			self.max_age = 10
 
 	def update(self):
 		#move randomly
@@ -66,13 +80,15 @@ class cell:
 		self.age += 1/FPS
 		if self.age > self.max_age:
 			cells.remove(self)
+			return
 		#you are hunting for food if you have not been scared
 		hunting = True
 		for c in cells:
 			#if you are touching another cell
-			if distance(self.x, self.y, c.x, c.y) < 5:
-				if c.strength > self.strength and self.age > 1/FPS*0.25:
-					cells.remove(self)
+			if distance(self.x, self.y, c.x, c.y) < 10:
+				if c.strength > self.strength and self.age > 1 and c.age > 1:
+					if self in cells:
+						cells.remove(self)
 					if c.age>c.reproduce_age:
 						c.reproduce()
 			#if you can perceive another cell
@@ -126,17 +142,18 @@ class cell:
 		pygame.draw.circle(screen, colour, (int(self.x), int(self.y)), 15)
 		if self.perception > 3:
 			pygame.draw.circle(screen, colour, (int(self.x), int(self.y)), int(self.perception), 3)
-		textsurface = myfont.render(str(int(self.aggression)), True, [0,0,0])
-		screen.blit(textsurface,(int(self.x - 10), int(self.y - 10)))
+		if self.strength >0:
+			textsurface = myfont.render(str(int(self.aggression)), True, [0,0,0])
+			screen.blit(textsurface,(int(self.x - 10), int(self.y - 10)))
 		
 	def reproduce(self):
-		child_strength = max(min(random.gauss(self.strength,1),max_str),0)
-		child_speed = max(min(random.gauss(self.cell_speed,0.2),max_spd),0)
-		child_aggression = max(min(random.gauss(self.aggression,5),100),0)
-		child_perception = max(min(random.gauss(self.perception,5),max_view),0)
+		child_strength = max(min(random.gauss(self.strength,.5),max_str),0)
+		child_speed = max(min(random.gauss(self.cell_speed,0.1),max_spd),0)
+		child_aggression = max(min(random.gauss(self.aggression,2.5),100),0)
+		child_perception = max(min(random.gauss(self.perception,2.5),max_view),0)
 		child_pos = (self.x+random.randint(5,10)*random.choice([-1,1]),self.y+random.randint(5,10)*random.choice([-1,1]))
-		child_max_age = max(min(random.gauss(self.perception,5),max_max_age),0)
-		child_reproduce_age = max(min(random.gauss(self.perception,5),max_max_age),min_reproduce_age)
+		child_max_age = 5
+		child_reproduce_age = 2
 		if len(cells) < max_number_of_cells:
 			cells.append(cell(child_pos,[child_strength,child_speed,child_aggression,child_perception,child_max_age,child_reproduce_age]))
 		
