@@ -29,7 +29,7 @@ weights = {"Chemoplast" : 1,
 #take a string and change n letters in it at random
 def change_n_letters(string, n):
 	if n > len(string):
-		print "Error, tried to change too many letters of a string"
+		print("Error, tried to change too many letters of a string")
 		return string
 	else:
 		#choose which letters to change
@@ -112,7 +112,7 @@ def compute_best_codes_brute_force(species):
 			break
 		time += 1
 		if time % 10000 == 0:
-			print time
+			print(time)
 
 	return sorted(top_codes, key=lambda x: x[1], reverse = True)
 #brute force computation is slow, to see that uncomment this line!
@@ -149,7 +149,7 @@ def compute_best_codes_by_construction(list_of_species):
 		output.append(letters[best_letter])
 	return "".join(output)
 
-print "Construction computation vs Jeff : ", compute_best_codes_by_construction([jeff])
+print("Construction computation vs Jeff : ", compute_best_codes_by_construction([jeff]))
 
-print "Construction computation vs Jeff and Geoff", compute_best_codes_by_construction([jeff, geoff])
+print("Construction computation vs Jeff and Geoff", compute_best_codes_by_construction([jeff, geoff]))
 
