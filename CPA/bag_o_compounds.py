@@ -57,7 +57,7 @@ def step_function(value, threshold):
 	elif value < threshold and threshold != 0 and value >= 0:
 		return 1 - (float(value)/threshold)
 	else:
-		print "error in step function"
+		print("error in step function")
 		return 0
 
 #initialise the processes
@@ -67,7 +67,7 @@ def run_processes():
 	for process in processes:
 		rate = max((step_function(chemicals[process[1]], low_threshold[process[1]])*
 				1 - step_function(chemicals[process[0]], low_threshold[process[0]])),0)
-		print rate,
+		print(rate)
 		if chemicals[process[0]] > rate:
 			chemicals[process[0]] -= rate
 			chemicals[process[1]] += rate
@@ -82,7 +82,7 @@ max_value = 0
 for i in range(run_time):
 	compute_concentrations()
 	run_processes()
-	print chemicals
+	print(chemicals)
 	data.append(chemicals[:])
 	for j in range(number_of_chemicals):
 		if chemicals[j] >= max_value:
