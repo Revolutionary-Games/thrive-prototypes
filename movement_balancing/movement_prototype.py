@@ -257,7 +257,7 @@ def gameloop():
 	force_flagella=8 #force of each flagella
 	cil_flag_scale = 0.75 #ratio of cilia force to flagella force
 
-	rate_of_turn = 0.5 #how fast should the cell turn?
+	rate_of_turn = 0.1 #how fast should the cell turn?
 
 	x_unit = math.sqrt(9)*hex_size/2
 	y_unit = math.sqrt(3)*hex_size/2
