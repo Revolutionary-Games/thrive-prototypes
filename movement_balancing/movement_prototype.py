@@ -5,22 +5,11 @@ from pygame.locals import *
 import math
 
 ''' THINGS STILL TO DO
-Fix mitochondria rotation
-Rotate Ribosomes
-Experiment with Cilia
+Remove organelle in editor
 '''
 
 #Constants
 hex_size=15
-#global_top_speed=10
-#cytoplasm_mass=1
-#nucleus_mass=7
-#mitochondria_mass=2
-#vacuole_mass=1
-#ribosome_mass=3
-#flagella_mass=0.5
-#FPS=60
-#force_flagella=0.1
 
 #Hex moving
 Up_0=np.array([0,-1*math.sqrt(3)*hex_size])
@@ -120,6 +109,10 @@ def draw_nucleus(position):
 def draw_vacuole(position):
 	color=[0,128,128]
 	draw_hex(color, position)
+	
+def draw_cilia(position):
+	color=[128,128,128]
+	draw_hex(color, position)
 
 def draw_cytoplasm(position):
 	color=[40,128,40]
@@ -182,6 +175,8 @@ def draw_element(string, position,tilt):
 		draw_nucleus(position)
 	elif string=='Ribosomes':
 		draw_ribosomes(position,tilt)
+	elif string=='Cilia':
+		draw_cilia(position)
 		
 def org_button(color1, color2, x, y, width, height,msg):
 	cur=pygame.mouse.get_pos()
@@ -223,6 +218,8 @@ def draw_cell(organelle_list,position):
 			draw_cytoplasm(position+rel_pos)
 		elif organelle[0]=='Mitochondria':
 			draw_mitochondria(position+rel_pos,organelle[2])
+		elif organelle[0]=='Cilia':
+			draw_cilia(position+rel_pos)
 
 def v_lines(dx,height,width,step):
 	for x in range(0,width,step):
@@ -241,8 +238,6 @@ def distance(a,b):
 
 organelle_list =[] #This will store all organelle
 
-flagella_list = [] #This specifically hold flagella since they matter more in this context
-
 clock = pygame.time.Clock()
 
 def gameloop():
@@ -252,13 +247,15 @@ def gameloop():
 	hex_size=15
 	global_top_speed=8
 	cytoplasm_mass=1
-	nucleus_mass=10
+	nucleus_mass=9
 	mitochondria_mass=2.5
 	vacuole_mass=1.3
 	ribosome_mass=4
 	flagella_mass=0.5
+	cilia_mass = 0.5
 	FPS=60
-	force_flagella=2.2 #force of each flagella
+	force_flagella=8 #force of each flagella
+	cil_flag_scale = 0.75 #ratio of cilia force to flagella force
 
 	rate_of_turn = 0.5 #how fast should the cell turn?
 
@@ -329,7 +326,6 @@ def gameloop():
 					if event.type == KEYDOWN:
 						if event.key == pygame.K_RETURN:
 							organelle_list.append(["Flagella",org_pos-cell_position])
-							flagella_list.append(org_pos-cell_position)
 							button_pressed=False
 						elif event.key == pygame.K_ESCAPE:
 							button_pressed = False
@@ -391,6 +387,25 @@ def gameloop():
 					elif event.type == pygame.MOUSEBUTTONDOWN:
 						tilt+=1
 						tilt = tilt % 6
+						
+			button_pressed=org_button((0,255,0), white, 10, height-430, 120, 50, "Cilia")
+			while button_pressed:
+				screen.fill(black)
+				message_to_screen("Press ESC to leave editor",(255,0,0),(0,0))
+				draw_cell(organelle_list,cell_position)
+				cur=pygame.mouse.get_pos()-cell_position
+				org_pos=(round(cur[0]/x_unit)*x_unit+cell_position[0],round(cur[1]/y_unit)*y_unit+cell_position[1])
+				draw_element("Cilia",org_pos,0)
+				message_to_screen("Press ENTER to place organelle",(255,0,0),(width-280,0))
+				pygame.display.update()
+				for event in pygame.event.get():
+					if event.type == KEYDOWN:
+						if event.key == pygame.K_RETURN:
+							organelle_list.append(["Cilia",org_pos-cell_position])
+							button_pressed=False
+						elif event.key == pygame.K_ESCAPE:
+							button_pressed = False
+							
 			button_pressed = num_button((0,255,0),white,width-230,height-120,200,50,force_flagella,"force_flagella")
 			while button_pressed:
 				force_flagella=ask(screen,"force_flagella")
@@ -427,6 +442,10 @@ def gameloop():
 			while button_pressed:
 				rate_of_turn=ask(screen,"rate_of_turn")
 				button_pressed=False
+			button_pressed = num_button((0,255,0),white,width-230,height-600,200,50,cil_flag_scale,"cil_flag_scale")
+			while button_pressed:
+				cil_flag_scale=ask(screen,"cil_flag_scale")
+				button_pressed=False
 			
 			draw_cell(organelle_list,[0.5*width, 0.5*height])
 			pygame.display.update()
@@ -440,7 +459,7 @@ def gameloop():
 							if distance(org[1],c_pos)<hex_size:
 								organelle_list.remove(org)
 								break
-					if event.key == pygame.K_ESCAPE:
+					elif event.key == pygame.K_ESCAPE:
 						cell_position = np.array([0.5*width, 0.5*height])
 						num_flagella=0
 						weight=0
@@ -489,10 +508,13 @@ def gameloop():
 									center_mass_x+=(organelle[1]+Down_Left)[0]*ribosome_mass/3
 									center_mass_y+=(organelle[1]+Down_Left)[1]*ribosome_mass/3
 							elif organelle[0]=='Flagella':
-								num_flagella+=1
 								weight+=flagella_mass
 								center_mass_x+=organelle[1][0]*flagella_mass
 								center_mass_y+=organelle[1][1]*flagella_mass
+							elif organelle[0]=='Cilia':
+								weight+=cilia_mass
+								center_mass_x+=organelle[1][0]*cilia_mass
+								center_mass_y+=organelle[1][1]*cilia_mass
 							elif organelle[0]=='Vacuole':
 								size+=1
 								weight+=vacuole_mass
@@ -520,6 +542,13 @@ def gameloop():
 						center_mass_x=center_mass_x/weight
 						center_mass_y=center_mass_y/weight
 
+						y = 0.1
+						x_w=0
+						x_a=0
+						x_d=0
+						x_s=0
+						torque=0
+						
 						#Calculate inertia
 						for organelle in organelle_list:
 							if organelle[0]=='Nucleus':
@@ -560,6 +589,27 @@ def gameloop():
 							elif organelle[0]=='Flagella':
 								inertia+=flagella_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)
 								inertia+=0.5*flagella_mass
+								#normalised flagella forces, otherwise flagella further away add more force
+								flag_loc = np.array([center_mass_x-organelle[1][0],center_mass_y-organelle[1][1]])
+								flag_loc_normalised = flag_loc/(math.sqrt(flag_loc[0]**2 + flag_loc[1]**2))
+								force_dir = force_flagella*(flag_loc_normalised)/weight
+								x_w+=np.abs(min(float(force_dir[1]),0))
+								x_s+=np.abs(max(float(force_dir[1]),0))
+								x_a+=np.abs(min(float(force_dir[0]),0))
+								x_d+=np.abs(max(float(force_dir[0]),0))
+								torque+=np.sqrt((flag_loc[0]**2+flag_loc[1]**2))*force_flagella
+							elif organelle[0]=='Cilia':
+								inertia+=cilia_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)
+								inertia+=0.5*cilia_mass
+								#normalised flagella forces, otherwise flagella further away add more force
+								flag_loc = np.array([center_mass_x-organelle[1][0],center_mass_y-organelle[1][1]])
+								flag_loc_normalised = flag_loc/(math.sqrt(flag_loc[0]**2 + flag_loc[1]**2))
+								force_dir = force_flagella*cil_flag_scale*(flag_loc_normalised)/weight
+								x_w+=np.abs(min(float(force_dir[1]),0))
+								x_s+=np.abs(max(float(force_dir[1]),0))
+								x_a+=np.abs(min(float(force_dir[0]),0))
+								x_d+=np.abs(max(float(force_dir[0]),0))
+								torque+=np.sqrt((flag_loc[0]**2+flag_loc[1]**2))*force_flagella*(2-cil_flag_scale)
 							elif organelle[0]=='Vacuole':
 								inertia+=vacuole_mass*((organelle[1][0]-center_mass_x)**2+(organelle[1][1]-center_mass_y)**2)
 								inertia+=0.5*vacuole_mass
@@ -577,29 +627,11 @@ def gameloop():
 								elif organelle[2]==120:
 									pos = organelle[1]+Down_Right
 									inertia+=mitochondria_mass*((pos[0]-center_mass_x)**2+(pos[1]-center_mass_y)**2)/2
-								
-						#y = 0.5/(1+size)
-						y = 0.1
-						x_w=0
-						x_a=0
-						x_d=0
-						x_s=0
-						torque=0
-						for flagella in flagella_list:
-							#normalised flagella forces, otherwise flagella further away add more force
-							flag_loc = np.array([center_mass_x,center_mass_y])-flagella
-							flag_loc_normalised = flag_loc/(math.sqrt(flag_loc[0]**2 + flag_loc[1]**2))
-							force_dir = force_flagella*(flag_loc_normalised)/weight
-							x_w+=np.abs(min(float(force_dir[1]),0))
-							x_s+=np.abs(max(float(force_dir[1]),0))
-							x_a+=np.abs(min(float(force_dir[0]),0))
-							x_d+=np.abs(max(float(force_dir[0]),0))
-							torque+=np.sqrt((flag_loc[0]**2+flag_loc[1]**2))*force_flagella
 						
-						speed_w=global_top_speed*((1-y)*sigmoid(15*(x_w-0.33))+y)
-						speed_a=global_top_speed*((1-y)*sigmoid(15*(x_a-0.33))+y)
-						speed_d=global_top_speed*((1-y)*sigmoid(15*(x_d-0.33))+y)
-						speed_s=global_top_speed*((1-y)*sigmoid(15*(x_s-0.33))+y)
+						speed_w=global_top_speed*((1-y)*sigmoid(12*(x_w-1))+y)
+						speed_a=global_top_speed*((1-y)*sigmoid(12*(x_a-1))+y)
+						speed_d=global_top_speed*((1-y)*sigmoid(12*(x_d-1))+y)
+						speed_s=global_top_speed*((1-y)*sigmoid(12*(x_s-1))+y)
 
 						editor=False
 			
