@@ -678,17 +678,17 @@ def gameloop():
 
 		keys = pygame.key.get_pressed()
 		if keys[pygame.K_w]:
-			dy+=math.cos(cell_angle)*speed_w
-			dx-=math.sin(cell_angle)*speed_w 
+			dy+=math.cos(cell_angle)*speed_w*FPS/60
+			dx-=math.sin(cell_angle)*speed_w*FPS/60
 		if keys[pygame.K_s]:
-			dy-=math.cos(cell_angle)*speed_s
-			dx+=math.sin(cell_angle)*speed_s 
+			dy-=math.cos(cell_angle)*speed_s*FPS/60
+			dx+=math.sin(cell_angle)*speed_s*FPS/60
 		if keys[pygame.K_d]:
-			dx-=math.cos(cell_angle)*speed_d
-			dy-=math.sin(cell_angle)*speed_d
+			dx-=math.cos(cell_angle)*speed_d*FPS/60
+			dy-=math.sin(cell_angle)*speed_d*FPS/60
 		if keys[pygame.K_a]:
-			dx+=math.cos(cell_angle)*speed_a
-			dy+=math.sin(cell_angle)*speed_a
+			dx+=math.cos(cell_angle)*speed_a*FPS/60
+			dy+=math.sin(cell_angle)*speed_a*FPS/60
 			
 		(dx,dy)=(dx % width, dy % height)
 		
@@ -714,7 +714,7 @@ def gameloop():
 		
 		draw_cell(organelle_list,cell_position)
 		pygame.display.update()
-		clock.tick(FPS)
+		FPS = max(15,min(60,clock.get_fps()))
 
 	pygame.quit()
 	quit()
