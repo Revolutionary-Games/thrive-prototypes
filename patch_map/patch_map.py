@@ -20,11 +20,22 @@ clock = pygame.time.Clock()
 def distance(a,b):
 	return math.sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
 
+def interpolate(maxi, mini, value):
+	return ((value-mini)/(maxi - mini))
+
 def get_depth(pos, ocean_depth, percentage_of_land):
+	percentage_of_water = 1 - percentage_of_land
+	my_percentage = pos[1]/height
 	if pos[1] < percentage_of_land*height:
 		return int(-(height*percentage_of_land-pos[1])*15/(height*percentage_of_land))
+	elif my_percentage < (percentage_of_land + 0.33*percentage_of_water):
+		return int(200*interpolate(percentage_of_land + 0.33*percentage_of_water, percentage_of_land, my_percentage))
+	elif my_percentage < (percentage_of_land + 0.55*percentage_of_water):
+		return int(200 + 500*interpolate(percentage_of_land + 0.55*percentage_of_water, 
+			percentage_of_land + 0.33*percentage_of_water, my_percentage))
 	else:
-		return int(ocean_depth*(pos[1] - height*percentage_of_land)/(height*(1 - percentage_of_land)))
+		return int(700 + (ocean_depth - 700)*interpolate(1, 
+			percentage_of_land + 0.55*percentage_of_water, my_percentage))
 
 
 
@@ -41,7 +52,7 @@ def get_type(pos, ocean_depth, percentage_of_land):
 	if patch_depth < 700:
 		return [random.choice(["Mid Ocean", "Mid Ocean", "Mid Ocean", "Cave"]), patch_depth]
 	#bathypelagic zone
-	if patch_depth > 700 and pos[1] < 0.8*height:
+	if patch_depth > 700 and patch_depth < 0.8*ocean_depth:
 		return [random.choice(["Deep Ocean", "Deep Ocean", "Deep Ocean", "Cave"]), patch_depth]
 	#ocean floor
 	return [random.choice(["Ocean Floor", "Ocean Floor", "Hydrothermal"]), patch_depth]
@@ -119,6 +130,7 @@ class patch:
 
 def reset():
 	#total ocean depth
+	global ocean_depth
 	ocean_depth = random.randint(1000,5000)
 	#percentage of land, from 0 to 0.25
 	global percentage_of_land
@@ -131,6 +143,8 @@ def reset():
 	if percentage_of_land < 0.1:
 		needed_patches.remove("Estuary")
 		needed_patches.remove("Tidepool")
+		needed_patches.remove("Mid Ocean")
+		needed_patches.remove("Deep Ocean")
 	#build patch list
 	#while there is room for another patch
 	cave_counter = 0
@@ -211,8 +225,26 @@ while running:
 
 	screen.fill(background_colour)
 
-	#draw ocean surface
+	#draw ocean levels
 	pygame.draw.line(screen, [0,0,200], [0, percentage_of_land*height], [width, percentage_of_land*height], 1)
+	textsurface = myfont.render("0m", True, [255,255,255]) 
+	screen.blit(textsurface,(10, percentage_of_land*height))
+
+	percentage_of_water = 1 - percentage_of_land
+	height_location = (percentage_of_land + 0.33*percentage_of_water)*height
+	pygame.draw.line(screen, [0,0,200], [0, height_location], [width, height_location], 1)
+	textsurface = myfont.render("200m", True, [255,255,255]) 
+	screen.blit(textsurface,(10, height_location))
+
+	height_location = (percentage_of_land + 0.55*percentage_of_water)*height
+	pygame.draw.line(screen, [0,0,200], [0, height_location], [width, height_location], 1)
+	textsurface = myfont.render("700m", True, [255,255,255]) 
+	screen.blit(textsurface,(10, height_location))
+
+	textsurface = myfont.render(str(ocean_depth) + "m", True, [255,255,255]) 
+	screen.blit(textsurface,(10, height - 20))
+
+
 
 	#draw patches
 	for p in patches:
