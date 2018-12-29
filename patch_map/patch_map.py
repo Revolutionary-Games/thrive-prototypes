@@ -28,14 +28,14 @@ def get_depth(pos, ocean_depth, percentage_of_land):
 	my_percentage = pos[1]/height
 	if pos[1] < percentage_of_land*height:
 		return int(-(height*percentage_of_land-pos[1])*15/(height*percentage_of_land))
-	elif my_percentage < (percentage_of_land + 0.33*percentage_of_water):
-		return int(200*interpolate(percentage_of_land + 0.33*percentage_of_water, percentage_of_land, my_percentage))
-	elif my_percentage < (percentage_of_land + 0.55*percentage_of_water):
-		return int(200 + 500*interpolate(percentage_of_land + 0.55*percentage_of_water, 
-			percentage_of_land + 0.33*percentage_of_water, my_percentage))
+	elif my_percentage < (percentage_of_land + 0.40*percentage_of_water):
+		return int(200*interpolate(percentage_of_land + 0.40*percentage_of_water, percentage_of_land, my_percentage))
+	elif my_percentage < (percentage_of_land + 0.60*percentage_of_water):
+		return int(200 + 500*interpolate(percentage_of_land + 0.60*percentage_of_water, 
+			percentage_of_land + 0.40*percentage_of_water, my_percentage))
 	else:
 		return int(700 + (ocean_depth - 700)*interpolate(1, 
-			percentage_of_land + 0.55*percentage_of_water, my_percentage))
+			percentage_of_land + 0.60*percentage_of_water, my_percentage))
 
 
 
@@ -231,12 +231,12 @@ while running:
 	screen.blit(textsurface,(10, percentage_of_land*height))
 
 	percentage_of_water = 1 - percentage_of_land
-	height_location = (percentage_of_land + 0.33*percentage_of_water)*height
+	height_location = (percentage_of_land + 0.40*percentage_of_water)*height
 	pygame.draw.line(screen, [0,0,200], [0, height_location], [width, height_location], 1)
 	textsurface = myfont.render("200m", True, [255,255,255]) 
 	screen.blit(textsurface,(10, height_location))
 
-	height_location = (percentage_of_land + 0.55*percentage_of_water)*height
+	height_location = (percentage_of_land + 0.60*percentage_of_water)*height
 	pygame.draw.line(screen, [0,0,200], [0, height_location], [width, height_location], 1)
 	textsurface = myfont.render("700m", True, [255,255,255]) 
 	screen.blit(textsurface,(10, height_location))
