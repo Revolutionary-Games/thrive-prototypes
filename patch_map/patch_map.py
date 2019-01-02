@@ -2,6 +2,7 @@ import pygame
 import math
 import random
 from pygame.locals import *
+from pygame import gfxdraw
 
 #setup
 
@@ -14,8 +15,13 @@ pygame.display.set_caption('Patch Map')
 pygame.font.init()
 
 myfont = pygame.font.SysFont("monospace", 20, bold = True)
+bg = pygame.image.load("bg.png")
 
 clock = pygame.time.Clock()
+
+def draw_aa_circle(colour, pos, radius):
+	pygame.gfxdraw.filled_circle(screen, pos[0], pos[1], radius, colour)
+	pygame.gfxdraw.aacircle(screen, pos[0], pos[1], radius, colour)
 
 def distance(a,b):
 	return math.sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
@@ -127,6 +133,12 @@ class patch:
 		if self.frozen == True:
 			self.colour = [255,255,255]
 
+	def draw(self):
+		if self.starter_patch:
+			draw_aa_circle([0,100,0], self.pos, 12)
+		draw_aa_circle([200,200,200], self.pos, 9)
+		draw_aa_circle(self.colour, self.pos, 8)
+
 
 def reset():
 	#total ocean depth
@@ -224,20 +236,21 @@ while running:
 	       
 
 	screen.fill(background_colour)
+	screen.blit(bg, [0,percentage_of_land*height])
 
 	#draw ocean levels
-	pygame.draw.line(screen, [0,0,200], [0, percentage_of_land*height], [width, percentage_of_land*height], 1)
+	pygame.draw.line(screen, [5,14,26], [0, percentage_of_land*height], [width, percentage_of_land*height], 1)
 	textsurface = myfont.render("0m", True, [255,255,255]) 
 	screen.blit(textsurface,(10, percentage_of_land*height))
 
 	percentage_of_water = 1 - percentage_of_land
 	height_location = (percentage_of_land + 0.40*percentage_of_water)*height
-	pygame.draw.line(screen, [0,0,200], [0, height_location], [width, height_location], 1)
+	pygame.draw.line(screen, [5,14,26], [0, height_location], [width, height_location], 1)
 	textsurface = myfont.render("200m", True, [255,255,255]) 
 	screen.blit(textsurface,(10, height_location))
 
 	height_location = (percentage_of_land + 0.60*percentage_of_water)*height
-	pygame.draw.line(screen, [0,0,200], [0, height_location], [width, height_location], 1)
+	pygame.draw.line(screen, [5,14,26], [0, height_location], [width, height_location], 1)
 	textsurface = myfont.render("700m", True, [255,255,255]) 
 	screen.blit(textsurface,(10, height_location))
 
@@ -248,9 +261,7 @@ while running:
 
 	#draw patches
 	for p in patches:
-		if p.starter_patch:
-			pygame.draw.circle(screen, [0,255,0], p.pos, 20)
-		pygame.draw.circle(screen, p.colour, p.pos, 10)
+		p.draw()
 
 	#display info for hovered patch
 	pos = pygame.mouse.get_pos()
