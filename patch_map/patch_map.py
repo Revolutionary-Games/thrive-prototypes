@@ -109,6 +109,19 @@ class patch:
 		self.set_colour()
 		self.set_light_level(frozen_percetage)
 
+	def get_neighbours(self):
+		for p in patches:
+			#if you are horizontally close enough
+			if abs(self.pos[0] - p.pos[0]) < 100 and p is not self:
+				#if you are less than 700 and so are they
+				if self.depth < 100 and p.depth < 100:
+					self.neighbours.append(p)
+				#if you are more than 0 and so are they
+				elif self.depth > 0 and p.depth > 0 and self.depth < 700 and p.depth < 700:
+					self.neighbours.append(p)
+				elif self.depth > 200 and p.depth > 200:
+					self.neighbours.append(p)
+
 	def set_colour(self):
 		if self.patch_type == "Hydrothermal":
 			self.colour = [255,0,0]
@@ -208,6 +221,10 @@ def reset():
 			best_dist = dist
 			best_patch = p
 	best_patch.starter_patch = True
+
+	#get each patch to work out what it's neighbours are
+	for p in patches:
+		p.get_neighbours()
 	print("Done")
 
 #how much of the planet surface is frozen
@@ -257,13 +274,7 @@ while running:
 	textsurface = myfont.render(str(ocean_depth) + "m", True, [255,255,255]) 
 	screen.blit(textsurface,(10, height - 20))
 
-
-
-	#draw patches
-	for p in patches:
-		p.draw()
-
-	#display info for hovered patch
+	#display info for hovered patch and show neighbours
 	pos = pygame.mouse.get_pos()
 	for p in patches:
 		if distance(p.pos, pos) < 50:
@@ -271,6 +282,17 @@ while running:
 				"  Depth : " + str(p.depth) + "m" +
 				"  Sunlight : " + str(round(p.sunlight,2)) + "w/m^2", True, [255,255,255])
 			screen.blit(textsurface,(10, 10))
+
+			for n in p.neighbours:
+				pygame.draw.line(screen, [150,150,150], p.pos, n.pos, 1)
+
+		
+		
+	#draw patches
+	for p in patches:		
+		p.draw()
+
+	
 
 
 	pygame.display.flip()
