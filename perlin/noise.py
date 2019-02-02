@@ -35,7 +35,7 @@ for i in range(width):
 		t = j/height
 
 		nx = 5 + 2*math.cos(2*math.pi*s)
-		ny = 5 + 2*math.cos(2*math.pi*t)
+		ny = 5.5 + 2*math.cos(2*math.pi*t)
 		nz = 5 + 2*math.sin(2*math.pi*s)
 		nw = 5 + 2*math.sin(2*math.pi*t)
 
