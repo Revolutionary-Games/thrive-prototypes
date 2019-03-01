@@ -26,6 +26,29 @@ pygame.font.init()
 
 # I wrote a vector mathematics class just to make things easier
 
+#print out the data of the shape
+def print_data():
+    print("Vertices = [")
+    for v in vertices:
+        print("[",v.pos.x,",",v.pos.y,",",v.pos.z,"],")
+    print("]")
+    print("Triangles = [")
+    for t in triangles:
+        print("[", end="")
+        counter = 0
+        for v in t:
+            print("[",v.pos.x,",",v.pos.y,",",v.pos.z,"]", end = "")
+            if (counter < 2):
+                print(",", end = "")
+            counter += 1
+        print("],")
+    print("]")
+    print("organelles = [")
+    for v in controlpoints:
+        print("[",v.pos.x - 500,",",v.pos.y - 500,",",v.pos.z,"],")
+    print("]")
+
+
 class Vector:
     'Represents a 2D vector.'
     def __init__(self, x = 0, y = 0, z = 0):
@@ -91,10 +114,10 @@ def drawTriangle(colour, triangle, xoff=0, yoff=0):
 size = 500
 sidelength = int(math.sqrt(float(size) / 6))
 
-print sidelength
+print(sidelength)
 truesize = 6*(sidelength**2)
 
-print truesize
+print(truesize)
 
 def within(a,b,lim=5):
     return abs(a-b) < lim
@@ -202,9 +225,9 @@ maxdist += 30
 
 #compute the size of gaps between vertices
 
-print 'maxdist', maxdist
+print('maxdist', maxdist)
 gap = float(2*maxdist)/sidelength
-print 'gap', gap
+print('gap', gap)
 
 #put vertices on the top and bottom of the cube
 
@@ -213,8 +236,8 @@ for i in range(sidelength + 1):
         vertices.append(vertex(-maxdist + i*gap, -maxdist + j*gap, -maxdist))
         vertices.append(vertex(-maxdist + i*gap, -maxdist + j*gap, +maxdist))
 
-print 'top and bottom complete'
-print 'Time : ' , time.time() - start_time
+print('top and bottom complete')
+print('Time : ' , time.time() - start_time)
 
 #put vertices on the sides of the cube
 
@@ -225,8 +248,8 @@ for i in range(sidelength):
         vertices.append(vertex(+maxdist, -maxdist + i*gap , -maxdist + gap + j*gap))
         vertices.append(vertex(-maxdist, +maxdist - i*gap , -maxdist + gap + j*gap))
 
-print 'sides complete'
-print 'Time : ' , time.time() - start_time
+print('sides complete')
+print('Time : ' , time.time() - start_time)
 
 #compute a list of neighbours for each vertex
 
@@ -239,8 +262,8 @@ for i in range(len(vertices)):
                 vertices[i].nbrs.append(vertices[j])
 
 
-print 'neighbours complete'
-print 'Time : ' , time.time() - start_time
+print('neighbours complete')
+print('Time : ' , time.time() - start_time)
 
 #compute a list of triangles which connect the vertices
 
@@ -253,17 +276,17 @@ for i in range(len(vertices)):
             if norm(crossproduct) >= 1:
                 triangles.append((vertices[i],vertices[i].nbrs[j],vertices[i].nbrs[k]))
 
-print 'triangles complete'
-print 'Time : ' , time.time() - start_time
+print('triangles complete')
+print('Time : ' , time.time() - start_time)
 
 #remove duplicates from the list of triangles
 
 triangles = list(set(triangles))
 
-print 'triangle filter complete'
-print 'Time : ' , time.time() - start_time
+print('triangle filter complete')
+print('Time : ' , time.time() - start_time)
 
-print len(triangles), 'triangles'
+print(len(triangles), 'triangles')
 
     
 counter = 0
@@ -294,6 +317,8 @@ while running:
             elif event.key == K_LCTRL:
                 for pt in controlpoints:
                     pt.clicked = False
+            elif event.key == K_p:
+                print_data()
 
     bg.fill(background_colour)
 
