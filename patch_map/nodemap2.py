@@ -58,6 +58,57 @@ def collide_point_rect(x,y,x1,y1,w1,h1):
 	else:
 		return False
 
+#cut a line into 3 pieces, horiztonal, vertical, horizontal and draw it
+def draw_step_line(a,b):
+	start = (int(a.x + 0.5*a.w), int(a.y + 0.5*a.h))
+	end = (int(b.x + 0.5*b.w), int(b.y + 0.5*b.h))
+	mid1 = (0.5*(start[0] + end[0]), start[1])
+	mid2 = (0.5*(start[0] + end[0]), end[1])
+	colour = [125,125,225]
+	if a.highlight or b.highlight:
+		colour = [125,225,125]			
+	pygame.draw.line(screen, colour, start, mid1, 2)
+	pygame.draw.line(screen, colour, mid1, mid2, 2)
+	pygame.draw.line(screen, colour, mid2, end, 2)
+
+#draw a line on the screen and check if it intersects with any other
+def draw_line(l):
+	colour = [125,125,225]
+	for k in lines:
+		if intersect(l,k) and k != l:
+			colour = [125,225,125]
+	start = (int(l[0][0]), int(l[0][1]))
+	end = (int(l[1][0]), int(l[1][1]))
+	pygame.draw.line(screen, colour, start, end, 2)
+
+#get the center of a box
+def center(box):
+	return [box.x + 0.5*box.w, box.y + 0.5*box.h]
+
+#functions to work out if two lines cross
+#cross product
+#which side of b - a is c on?
+def cross(ax, ay, bx, by, cx, cy):
+    return (bx - ax)*(cy - ay) - (by - ay)*(cx - ax);
+#get the sgn of a value
+def sgn(x):
+	if x > 0:
+		return 1
+	return -1
+#check if the two lines intersect
+def intersect(l1,l2):
+	a = l1[0]
+	b = l1[1]
+	c = l2[0]
+	d = l2[1]
+	if ( sgn(cross(a[0],a[1],b[0],b[1],c[0],c[1])) != sgn(cross(a[0],a[1],b[0],b[1],d[0],d[1])) and
+		sgn(cross(c[0],c[1],d[0],d[1],a[0],a[1])) != sgn(cross(c[0],c[1],d[0],d[1],b[0],b[1])) and
+		a != c and a != d and b != c and b != d):
+		return True
+	return False
+
+
+
 #a cluster of patch nodes
 class cluster:
 	#x,y,width,height,number of nodes verticall, number of nodes horizontally
@@ -73,18 +124,13 @@ class cluster:
 		#is the user hovering over this clusted?
 		self.highlight = False
 
+	#this fn is not currently used
 	def draw_connections(self):
 		for n in self.neighbours:
 			start = (int(self.x + 0.5*self.w), int(self.y + 0.5*self.h))
 			end = (int(n.x + 0.5*n.w), int(n.y + 0.5*n.h))
-			mid1 = (0.5*(start[0] + end[0]), start[1])
-			mid2 = (0.5*(start[0] + end[0]), end[1])
-			colour = [125,125,225]
-			if self.highlight or n.highlight:
-				colour = [125,225,125]			
-			pygame.draw.line(screen, colour, start, mid1, 2)
-			pygame.draw.line(screen, colour, mid1, mid2, 2)
-			pygame.draw.line(screen, colour, mid2, end, 2)
+			pygame.draw.line(screen, [125,125,225], start, end, 2)
+			
 
 	def draw(self):
 		pygame.draw.rect(screen, background_colour, (int(self.x), int(self.y), int(self.w), int(self.h)))
@@ -105,17 +151,22 @@ class node:
 
 node_size = 30
 clusters = []
+lines = []
 def reset():
 	#add some random clusters to the map
 	global clusters
+	global lines
 	clusters = []
+	lines = []
 	counter = 0
 	while counter < 1000:
 		counter += 1
+		#pick a random place for a new cluster
 		x = random.randint(0,width)
 		y = random.randint(0,height)
 		n = random.randint(1,5)
-		m = random.choice([1,1,1,2,2,3])
+		m = random.randint(1,3)
+		m = max(1,min(m,5-n))
 		w = node_size*m
 		h = node_size*n
 		#if the cluster is fully on the screen
@@ -127,9 +178,31 @@ def reset():
 				if collide_rects(x -padding,y-padding,w+2*padding,h+2*padding,c.x,c.y,c.w,c.h):
 					collided = True
 					break
-			#if it is on the screen and not colliding with any others then add it
+			#if it is on the screen and not colliding with any others
 			if collided == False:
-				clusters.append(cluster(x,y,w,h,n,m))
+				#add all connections you can
+				lines2 = []
+				#for each other cluster
+				for c in clusters:
+					#if that cluster is close
+					if distance(x,y,c.x,c.y) < 200: 
+						#draw a line to that cluster
+						line = [center(cluster(x,y,w,h,n,m)), center(c)]
+						#check if that line intersects any lines already drawn
+						intersection = False
+						for l in lines:
+							if intersect(line,l):
+								intersection = True
+						for l in lines2:
+							if intersect(line,l):
+								intersection = True
+						#if not then add that line to the map
+						if intersection == False:
+							lines2.append(line)
+				#add a cluster only if it is the first or it is connected to at lease one other
+				if len(lines2) > 0 or len(clusters) == 0:
+					clusters.append(cluster(x,y,w,h,n,m))
+					lines = lines + lines2[:]
 
 	#add patches to each random cluster
 	for c in clusters:
@@ -140,12 +213,13 @@ def reset():
 				c.nodes.append(node(x,y))
 
 	#add connections between clusters
-	for c in clusters:
-		while 1:
-			d = random.choice(clusters)
-			if distance(d.x,d.y,c.x,c.y) < 300 and d != c and c not in d.neighbours:
-				c.neighbours.append(d)
-				break
+	#for c in clusters:
+	#	while 1:
+	#		d = random.choice(clusters)
+	#		if distance(d.x,d.y,c.x,c.y) < 300 and d != c and c not in d.neighbours:
+	#			c.neighbours.append(d)
+				#lines.append([center(d), center(c)])
+	#			break
 
 
 reset()
@@ -170,8 +244,11 @@ while running:
 
 	screen.fill(background_colour)
 
-	for c in clusters:
-		c.draw_connections()
+	#for c in clusters:
+	#	c.draw_connections()
+
+	for l in lines:
+		draw_line(l)
 
 	for c in clusters:
 		c.draw()
