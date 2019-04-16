@@ -5,7 +5,8 @@ from pygame.locals import *
 
 #setup
 
-background_colour = (10,10,30)
+background_colour = (133,164,186)
+line_colour = (243,245,248)
 (width, height) = (1000, 600)
 
 screen = pygame.display.set_mode((width, height))#,pygame.FULLSCREEN)
@@ -73,13 +74,13 @@ def draw_step_line(a,b):
 
 #draw a line on the screen and check if it intersects with any other
 def draw_line(l):
-	colour = [125,125,225]
+	colour = line_colour
 	for k in lines:
 		if intersect(l,k) and k != l:
 			colour = [125,225,125]
 	start = (int(l[0][0]), int(l[0][1]))
 	end = (int(l[1][0]), int(l[1][1]))
-	pygame.draw.line(screen, colour, start, end, 2)
+	pygame.draw.line(screen, colour, start, end, 5)
 
 #get the center of a box
 def center(box):
@@ -107,6 +108,44 @@ def intersect(l1,l2):
 		return True
 	return False
 
+#connect two points with only diagonal or straight lines
+def compute_subway_line(a,b):
+	dy = b[1] - a[1] 
+	dx = b[0] - a[0] 
+	mid = [width/2,height/2]
+	flipx = 1
+	if dx < 0:
+		flipx = -1
+		dx = -dx
+	if dy < -2*dx:
+		t = dx
+		mid = [a[0], a[1] + dy + t]
+	elif dy < -0.5*dx:
+		if dx > -dy:
+			t = -dy
+			c = dx - t
+		else: 
+			t = dx
+			c = dy - t
+		mid = [a[0] + flipx*t, a[1] - t]
+	elif dy < 0.5*dx:
+		t = abs(dy)
+		mid = [a[0] + flipx*dx - flipx*t, a[1]]
+	elif dy < 2*dx:
+		if dx > dy:
+			t = dy
+			c = dx - t
+		else: 
+			t = dx
+			c = dy - t
+		mid = [a[0] + flipx*t, a[1] + t]
+	else:
+		t = dx
+		mid = [a[0], a[1] + dy - t]
+	
+	#pygame.draw.line(screen,[100,100,200], a, mid, 10)
+	#pygame.draw.line(screen,[100,100,200], mid, b, 10)
+	return [[a,mid],[mid,b]]
 
 
 #a cluster of patch nodes
@@ -134,10 +173,10 @@ class cluster:
 
 	def draw(self):
 		pygame.draw.rect(screen, background_colour, (int(self.x), int(self.y), int(self.w), int(self.h)))
-		colour = [125,125,225]
+		colour = line_colour
 		if self.highlight:
 			colour = [125,225,125]
-		pygame.draw.rect(screen, colour, (int(self.x), int(self.y), int(self.w), int(self.h)), 2)
+		pygame.draw.rect(screen, colour, (int(self.x), int(self.y), int(self.w), int(self.h)), 5)
 
 #a patch node
 class node:
@@ -149,7 +188,7 @@ class node:
 	def draw(self):
 		pygame.draw.circle(screen, self.colour,(int(self.x), int(self.y)), 10)
 
-node_size = 30
+node_size = 35
 clusters = []
 lines = []
 def reset():
@@ -161,9 +200,16 @@ def reset():
 	counter = 0
 	while counter < 1000:
 		counter += 1
-		#pick a random place for a new cluster
+		#make the new cluster somewhat gridwise with the old one
 		x = random.randint(0,width)
 		y = random.randint(0,height)
+		if (len(clusters) > 0):
+			c = random.choice(clusters)
+			if random.choice([True,False]):
+				x = c.x
+			else:
+				y = c.y
+		#pick a random place for a new cluster
 		n = random.randint(1,5)
 		m = random.randint(1,3)
 		m = max(1,min(m,5-n))
@@ -187,18 +233,22 @@ def reset():
 					#if that cluster is close
 					if distance(x,y,c.x,c.y) < 200: 
 						#draw a line to that cluster
-						line = [center(cluster(x,y,w,h,n,m)), center(c)]
+						#line = [center(cluster(x,y,w,h,n,m)), center(c)]
+						nlines = compute_subway_line(center(cluster(x,y,w,h,n,m)), center(c))
 						#check if that line intersects any lines already drawn
 						intersection = False
 						for l in lines:
-							if intersect(line,l):
-								intersection = True
+							for k in nlines:
+								if intersect(k,l):
+									intersection = True
 						for l in lines2:
-							if intersect(line,l):
-								intersection = True
+							for k in nlines:
+								if intersect(k,l):
+									intersection = True
 						#if not then add that line to the map
 						if intersection == False:
-							lines2.append(line)
+							for k in nlines:
+								lines2.append(k)
 				#add a cluster only if it is the first or it is connected to at lease one other
 				if len(lines2) > 0 or len(clusters) == 0:
 					clusters.append(cluster(x,y,w,h,n,m))
