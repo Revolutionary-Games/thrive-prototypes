@@ -5,8 +5,8 @@ from pygame.locals import *
 
 #setup
 
-background_colour = (133,164,186)
-line_colour = (243,245,248)
+background_colour = (0,43,66)
+line_colour = (0,196,162)
 (width, height) = (1000, 600)
 
 screen = pygame.display.set_mode((width, height))#,pygame.FULLSCREEN)
@@ -29,7 +29,7 @@ def collide_circle_screen(x,y,r):
 
 #check if a rectangle collides with the screen
 def collide_rect_screen(x,y,w,h):
-	if x + w > width or x - w < 0 or y + h > height or y - h < 0:
+	if x + w + 5 > width or x - w < 0 or y + h + 5 > height or y - h < 0:
 		return True
 	else:
 		return False
@@ -59,6 +59,10 @@ def collide_point_rect(x,y,x1,y1,w1,h1):
 	else:
 		return False
 
+#lerp
+def lerp(a,b,t):
+	return [a[0]*t + b[0]*(1 - t), a[1]*t + b[1]*(1 - t)]
+
 #cut a line into 3 pieces, horiztonal, vertical, horizontal and draw it
 def draw_step_line(a,b):
 	start = (int(a.x + 0.5*a.w), int(a.y + 0.5*a.h))
@@ -81,6 +85,28 @@ def draw_line(l):
 	start = (int(l[0][0]), int(l[0][1]))
 	end = (int(l[1][0]), int(l[1][1]))
 	pygame.draw.line(screen, colour, start, end, 5)
+
+
+def draw_rounded_box(x,y,w,h):
+	arc_size = 0.5 #how rounded should the corners be? 0 = square, 1 = circle
+	thickness = 5 #how thick should the lines be
+	colour = line_colour
+	#draw the 4 arcs in the corners
+	z = min(w,h)
+	offset = thickness/2
+	for i in range(5):
+		pygame.draw.arc(screen, colour, [x + w - arc_size*z,y,arc_size*z,arc_size*z], 0 + 0.01*i, math.pi/2, thickness)
+		pygame.draw.arc(screen, colour, [x,y,arc_size*z,arc_size*z], math.pi/2 + 0.01*i, math.pi, thickness)
+		pygame.draw.arc(screen, colour, [x,y + h - arc_size*z,arc_size*z,arc_size*z], -math.pi + 0.01*i, -math.pi/2, thickness)
+		pygame.draw.arc(screen, colour, [x + w - arc_size*z,y + h - arc_size*z,arc_size*z,arc_size*z], -math.pi/2 + 0.01*i, 0, thickness)
+	#draw the 4 lines connecting the sides
+	offset = z/30
+	pygame.draw.line(screen, colour, [x + 0.5*arc_size*z, y + offset], [x + w - 0.5*arc_size*z,y +  offset], thickness)
+	pygame.draw.line(screen, colour, [x + 0.5*arc_size*z, y + h - offset], [x + w - 0.5*arc_size*z,y + h - offset], thickness)
+	pygame.draw.line(screen, colour, [x + offset, y+ 0.5*arc_size*z], [x + offset,y+ h - 0.5*arc_size*z], thickness)
+	pygame.draw.line(screen, colour, [x+ w - offset, y+ 0.5*arc_size*z], [x + w - offset,y+ h - 0.5*arc_size*z], thickness)
+
+
 
 #get the center of a box
 def center(box):
@@ -105,6 +131,18 @@ def intersect(l1,l2):
 	if ( sgn(cross(a[0],a[1],b[0],b[1],c[0],c[1])) != sgn(cross(a[0],a[1],b[0],b[1],d[0],d[1])) and
 		sgn(cross(c[0],c[1],d[0],d[1],a[0],a[1])) != sgn(cross(c[0],c[1],d[0],d[1],b[0],b[1])) and
 		a != c and a != d and b != c and b != d):
+		return True
+	return False
+
+#check if a box and a line intersect
+def collide_line_box(l,b):
+	if intersect(l,[[b.x,b.y],[b.x + b.w, b.y]]):
+		return True
+	if intersect(l,[[b.x + b.w, b.y],[b.x + b.w, b.y + b.h]]):
+		return True
+	if intersect(l,[[b.x + b.w, b.y + b.h], [b.x, b.y + b.h]]):
+		return True
+	if intersect(l,[[b.x, b.y + b.h], [b.x, b.y]]):
 		return True
 	return False
 
@@ -147,6 +185,25 @@ def compute_subway_line(a,b):
 	#pygame.draw.line(screen,[100,100,200], mid, b, 10)
 	return [[a,mid],[mid,b]]
 
+#return points on the border of a box
+def box_points(c1,c2):
+	#get the right quadrant for each box
+	dy = c2.y + 0.5*c2.h - c1.y - 0.5*c1.h
+	dx = c2.x + 0.5*c2.w - c1.x - 0.5*c1.w
+	offset = 0
+	#top
+	if dy < -abs(dx):
+		return ((c1.x + 0.5*c1.w, c1.y - offset), (c2.x + 0.5*c2.w, c2.y + c2.h + offset))
+	#left, right
+	if dy < abs(dx):
+		#right
+		if dx > 0:
+			return ((c1.x + c1.w + offset, c1.y + 0.5*c1.h), (c2.x - offset, c2.y + 0.5*c2.h))
+		else:
+			return ((c1.x - offset, c1.y + 0.5*c1.h), (c2.x + c2.w + offset, c2.y + 0.5*c2.h))
+	#bottom
+	return ((c1.x + 0.5*c1.w, c1.y + c1.h + offset), (c2.x + 0.5*c2.w, c2.y - offset))
+
 
 #a cluster of patch nodes
 class cluster:
@@ -172,11 +229,13 @@ class cluster:
 			
 
 	def draw(self):
-		pygame.draw.rect(screen, background_colour, (int(self.x), int(self.y), int(self.w), int(self.h)))
+		pygame.draw.rect(screen, background_colour, (int(self.x - 3), int(self.y - 3), int(self.w + 6), int(self.h + 6)))
+		
 		colour = line_colour
 		if self.highlight:
 			colour = [125,225,125]
-		pygame.draw.rect(screen, colour, (int(self.x), int(self.y), int(self.w), int(self.h)), 5)
+		#pygame.draw.rect(screen, colour, (int(self.x), int(self.y), int(self.w), int(self.h)), 5)
+		draw_rounded_box(int(self.x - 5), int(self.y - 5), int(self.w + 10), int(self.h + 10))
 
 #a patch node
 class node:
@@ -198,23 +257,25 @@ def reset():
 	clusters = []
 	lines = []
 	counter = 0
-	while counter < 1000:
+	while counter < 10000:
 		counter += 1
 		#make the new cluster somewhat gridwise with the old one
+		#pick a random size for the new cluster
+		n = random.randint(1,5)
+		m = random.randint(1,3)
+		m = max(1,min(m,5-n))
+		w = node_size*m
+		h = node_size*n
+		#pick a place for it
 		x = random.randint(0,width)
 		y = random.randint(0,height)
+		#try to line it up with a previous box
 		if (len(clusters) > 0):
 			c = random.choice(clusters)
 			if random.choice([True,False]):
 				x = c.x
 			else:
 				y = c.y
-		#pick a random place for a new cluster
-		n = random.randint(1,5)
-		m = random.randint(1,3)
-		m = max(1,min(m,5-n))
-		w = node_size*m
-		h = node_size*n
 		#if the cluster is fully on the screen
 		if collide_rect_screen(x,y,w,h) == False:
 			#check the cluster does not collide with any others
@@ -222,6 +283,11 @@ def reset():
 			for c in clusters:	
 				padding = 50		
 				if collide_rects(x -padding,y-padding,w+2*padding,h+2*padding,c.x,c.y,c.w,c.h):
+					collided = True
+					break
+			#check the cluster does not collide with any lines
+			for l in lines:		
+				if collide_line_box(l,cluster(x,y,w,h,n,m)):
 					collided = True
 					break
 			#if it is on the screen and not colliding with any others
@@ -234,7 +300,9 @@ def reset():
 					if distance(x,y,c.x,c.y) < 200: 
 						#draw a line to that cluster
 						#line = [center(cluster(x,y,w,h,n,m)), center(c)]
-						nlines = compute_subway_line(center(cluster(x,y,w,h,n,m)), center(c))
+						#nlines = compute_subway_line(center(cluster(x,y,w,h,n,m)), center(c))
+						bp = box_points(cluster(x,y,w,h,n,m),c)
+						nlines = compute_subway_line(bp[0], bp[1])
 						#check if that line intersects any lines already drawn
 						intersection = False
 						for l in lines:
@@ -245,10 +313,17 @@ def reset():
 							for k in nlines:
 								if intersect(k,l):
 									intersection = True
+						#check if either line intersects any boxes
+						for k in lines:
+							for d in clusters:
+								if d != c:
+									if collide_line_box(k,d):
+										intersection = True
 						#if not then add that line to the map
 						if intersection == False:
 							for k in nlines:
 								lines2.append(k)
+
 				#add a cluster only if it is the first or it is connected to at lease one other
 				if len(lines2) > 0 or len(clusters) == 0:
 					clusters.append(cluster(x,y,w,h,n,m))
@@ -299,6 +374,7 @@ while running:
 
 	for l in lines:
 		draw_line(l)
+
 
 	for c in clusters:
 		c.draw()
