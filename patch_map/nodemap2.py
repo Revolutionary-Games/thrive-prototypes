@@ -14,11 +14,45 @@ screen.fill(background_colour)
 pygame.display.set_caption('Node Map')
 pygame.font.init()
 
-myfont = pygame.font.SysFont("monospace", 20)
+myfont = pygame.font.SysFont("monospace",20,bold = True)
+icons = pygame.image.load("icons.png")
+icons = pygame.transform.rotozoom(icons, 0, 0.5)
 
 clock = pygame.time.Clock()
 
 colours = [(230, 25, 75), (60, 180, 75), (255, 225, 25), (0, 130, 200), (245, 130, 48), (145, 30, 180), (70, 240, 240), (240, 50, 230), (210, 245, 60), (250, 190, 190), (0, 128, 128), (230, 190, 255), (170, 110, 40), (255, 250, 200), (128, 0, 0), (170, 255, 195), (128, 128, 0), (255, 215, 180), (0, 0, 128), (128, 128, 128), (255, 255, 255)]
+
+biomes = ["Epipelagic", "Mesopelagic", "Bathypelagic", "Abyssopelagic", "Ocean Floor", "Vent", "Cave", "Estuary", "Coastal", "Tide Pool"]
+biomes_non_stack = [ "Ocean Floor", "Vent", "Cave", "Estuary", "Coastal", "Tide Pool"]
+
+#which patches are allowed next to each other?
+biome_next_to = {
+	"Epipelagic" : ["Mesopelagic", "Coastal"],
+	"Mesopelagic" : ["Coastal", "Epipelagic", "Bathypelagic", "Cave"],
+	"Bathypelagic" : ["Mesopelagic", "Abyssopelagic", "Cave", "Ocean Floor", "Vent"],
+	"Abyssopelagic" : ["Bathypelagic", "Ocean Floor", "Vent"],
+	"Ocean Floor" : ["Bathypelagic", "Abyssopelagic", "Vent"],
+	"Vent" : ["Ocean Floor", "Abyssopelagic", "Bathypelagic"],
+	"Cave" : ["Mesopelagic", "Bathypelagic"],
+	"Estuary" : ["Coastal", "Tide Pool"],
+	"Coastal" : ["Mesopelagic", "Epipelagic", "Tide Pool", "Estuary"],
+	"Tide Pool" : ["Estuary", "Coastal"]
+
+}
+
+biomes_sprite = {
+	"Coastal" : [0,0],
+	"Epipelagic" : [0,1],
+	"Mesopelagic" : [0,2],
+	"Bathypelagic" : [0,3],
+	"Abyssopelagic" : [0,4],
+	"Ocean Floor" : [0,5], # this is wrong
+	"Vent" : [0,6],
+	"Cave" : [0,7],
+	"Tide Pool" : [1,0],
+	"Estuary" : [1,2]
+
+}
 
 #check if a circle is off the screen
 def collide_circle_screen(x,y,r):
@@ -100,7 +134,7 @@ def draw_rounded_box(x,y,w,h):
 		pygame.draw.arc(screen, colour, [x,y + h - arc_size*z,arc_size*z,arc_size*z], -math.pi + 0.01*i, -math.pi/2, thickness)
 		pygame.draw.arc(screen, colour, [x + w - arc_size*z,y + h - arc_size*z,arc_size*z,arc_size*z], -math.pi/2 + 0.01*i, 0, thickness)
 	#draw the 4 lines connecting the sides
-	offset = z/30
+	offset = 2#z/30
 	pygame.draw.line(screen, colour, [x + 0.5*arc_size*z, y + offset], [x + w - 0.5*arc_size*z,y +  offset], thickness)
 	pygame.draw.line(screen, colour, [x + 0.5*arc_size*z, y + h - offset], [x + w - 0.5*arc_size*z,y + h - offset], thickness)
 	pygame.draw.line(screen, colour, [x + offset, y+ 0.5*arc_size*z], [x + offset,y+ h - 0.5*arc_size*z], thickness)
@@ -204,6 +238,82 @@ def box_points(c1,c2):
 	#bottom
 	return ((c1.x + 0.5*c1.w, c1.y + c1.h + offset), (c2.x + 0.5*c2.w, c2.y - offset))
 
+def sides(c,n):
+	#top
+	if n == 0:
+		return [c.x + 0.5*c.w, c.y], [c.x, c.y]
+	#right
+	if n == 1:
+		return [c.x + c.w, c.y + 0.5*c.h], [c.x + c.w, c.y]
+	#bottom
+	if n == 2:
+		return [c.x + 0.5*c.w, c.y + c.h], [c.x + c.w, c.y + c.h]
+	#left
+	if n == 3:
+		return [c.x, c.y + 0.5*c.h], [c.x, c.y + c.h]
+
+def collides_and_tangents(c1, c2, c_lines, p1, t1, p2, t2):
+	for l in range(len(c_lines)):
+		if collide_line_box(c_lines[l],c1) == True or collide_line_box(c_lines[l],c2) == True:
+			return True
+		if l == 0:
+			if abs(cross(t1[0], t1[1], p1[0], p1[1], c_lines[l][1][0], c_lines[l][1][1])) < 0.1:
+				return True
+		if l == 1:
+			if abs(cross(t2[0], t2[1], p2[0], p2[1], c_lines[l][0][0], c_lines[l][0][1])) < 0.1:
+				return True
+	return False
+
+def get_lines(c1,c2):
+	#check a new candidate lines from c1 to c2
+	for i in range(4):
+		for j in range(4):
+			c_lines = []
+			p1, t1 = sides(c1,i)
+			p2, t2 = sides(c2,j)
+			c_lines = compute_subway_line(p1,p2)
+			#check if this line collides with the boxes
+			if collides_and_tangents(c1, c2, c_lines, p1, t1, p2, t2) == False:
+				return c_lines
+			if p1[0] == p2[0] or p1[1] == p2[1]:
+				c_lines = [[p1,p2]]
+				if collides_and_tangents(c1, c2, c_lines, p1, t1, p2, t2)  == False:
+					return c_lines
+
+	return False
+
+#a wrapped function for get lines, try to connect the boxes one way round and if that fails try the other way
+def get_lines_wrapper(c1,c2):
+	l = get_lines(c1,c2)
+	if l != False:
+		return l
+	else:
+		l = get_lines(c2,c1)
+		return l
+
+def check_lines_boxes_collide(nlines, lines, lines2, cluster):
+	if nlines != False:
+		#check if that line intersects any lines already drawn
+		intersection = False
+		for l in lines:
+			for k in nlines:
+				if intersect(k,l):
+					intersection = True
+		for l in lines2:
+			for k in nlines:
+				if intersect(k,l):
+					intersection = True
+		#check if either line intersects any boxes
+		for k in nlines:
+			for d in clusters:
+				if d != cluster:
+					if collide_line_box(k,d):
+						intersection = True
+		return intersection
+
+	return True
+
+
 
 #a cluster of patch nodes
 class cluster:
@@ -239,15 +349,23 @@ class cluster:
 
 #a patch node
 class node:
-	def __init__(self, x, y):
+	def __init__(self, x, y, biome):
 		self.x = x
 		self.y = y
 		self.colour = random.choice(colours)
+		self.biome = biome
 
 	def draw(self):
-		pygame.draw.circle(screen, self.colour,(int(self.x), int(self.y)), 10)
+		coords = biomes_sprite[self.biome]
+		cropx,cropy = 0.5*201 + 0.5*292*coords[0],0.5*(53 + 68*coords[1] + 15*coords[1]) #Change value to crop different rect areas
+		cropRect = (cropx, cropy, 35,35)
+		screen.blit(icons,(int(self.x + 8), int(self.y + 8)),cropRect)
+		#pygame.draw.circle(screen, self.colour,(int(self.x), int(self.y)), 10)
+		textsurface = myfont.render(str(self.biome), False, (255, 255, 255))
+		screen.blit(textsurface,(self.x,self.y))
 
-node_size = 35
+
+node_size = 50
 clusters = []
 lines = []
 def reset():
@@ -257,13 +375,14 @@ def reset():
 	clusters = []
 	lines = []
 	counter = 0
-	while counter < 10000:
+	desired_biomes = biomes_non_stack[:]
+	while counter < 1000:
 		counter += 1
 		#make the new cluster somewhat gridwise with the old one
 		#pick a random size for the new cluster
-		n = random.randint(1,5)
-		m = random.randint(1,3)
-		m = max(1,min(m,5-n))
+		n = random.choice([1,4])
+		m = 1#random.randint(1,3)
+		#m = max(1,min(m,6-n))
 		w = node_size*m
 		h = node_size*n
 		#pick a place for it
@@ -276,24 +395,26 @@ def reset():
 				x = c.x
 			else:
 				y = c.y
+		test_cluster = cluster(x,y,w,h,n,m)
 		#if the cluster is fully on the screen
 		if collide_rect_screen(x,y,w,h) == False:
 			#check the cluster does not collide with any others
 			collided = False		
 			for c in clusters:	
 				padding = 50		
-				if collide_rects(x -padding,y-padding,w+2*padding,h+2*padding,c.x,c.y,c.w,c.h):
+				if collide_rects(x-padding,y-padding,w+2*padding,h+2*padding,c.x,c.y,c.w,c.h):
 					collided = True
 					break
 			#check the cluster does not collide with any lines
-			for l in lines:		
-				if collide_line_box(l,cluster(x,y,w,h,n,m)):
-					collided = True
-					break
+			#for l in lines:		
+			#	if collide_line_box(l,cluster(x,y,w,h,n,m)):
+			#		collided = True
+			#		break
 			#if it is on the screen and not colliding with any others
 			if collided == False:
 				#add all connections you can
-				lines2 = []
+				lines2 = [] #these are lines which potentially can be added to the map
+				neighbours2 = [] #if these lines are added which neightbours do they connect?
 				#for each other cluster
 				for c in clusters:
 					#if that cluster is close
@@ -301,41 +422,64 @@ def reset():
 						#draw a line to that cluster
 						#line = [center(cluster(x,y,w,h,n,m)), center(c)]
 						#nlines = compute_subway_line(center(cluster(x,y,w,h,n,m)), center(c))
-						bp = box_points(cluster(x,y,w,h,n,m),c)
-						nlines = compute_subway_line(bp[0], bp[1])
-						#check if that line intersects any lines already drawn
-						intersection = False
-						for l in lines:
-							for k in nlines:
-								if intersect(k,l):
-									intersection = True
-						for l in lines2:
-							for k in nlines:
-								if intersect(k,l):
-									intersection = True
-						#check if either line intersects any boxes
-						for k in lines:
-							for d in clusters:
-								if d != c:
-									if collide_line_box(k,d):
-										intersection = True
-						#if not then add that line to the map
-						if intersection == False:
+						#bp = box_points(cluster(x,y,w,h,n,m),c)
+						#nlines = compute_subway_line(bp[0], bp[1])
+						nlines = get_lines_wrapper(test_cluster,c)
+						#if the newlines don't collide with any current lines or boxes
+						if check_lines_boxes_collide(nlines, lines, lines2, c) == False:
+							#add them to the list of lines to add
 							for k in nlines:
 								lines2.append(k)
-
+								neighbours2.append(c)
 				#add a cluster only if it is the first or it is connected to at lease one other
 				if len(lines2) > 0 or len(clusters) == 0:
-					clusters.append(cluster(x,y,w,h,n,m))
-					lines = lines + lines2[:]
+					#if the cluster is a singleton
+					if test_cluster.n == 1:
+						#check there is a valid biome for the cluster
+						possible_biomes = biomes_non_stack[:]
+						for c in neighbours2:
+							#trap(c, test_cluster)
+							length = len(possible_biomes)
+							for i in range(len(possible_biomes)):
+								pos = length - 1 - i
+								found = False
+								for n in c.nodes:
+									if possible_biomes[pos] in biome_next_to[n.biome]:
+										found = True
+								if found == False:
+									possible_biomes.pop(pos)							
 
-	#add patches to each random cluster
-	for c in clusters:
-		for i in range(c.m):
-			x = c.x + i*node_size + node_size/2
-			for j in range(c.n):
-				y = c.y + j*node_size + node_size/2
-				c.nodes.append(node(x,y))
+						#finally add the cluster
+						if len(possible_biomes) > 0:
+							#add the neighbours to each patch which has gained them
+							for c in neighbours2:
+								test_cluster.neighbours.append(c)
+								c.neighbours.append(test_cluster)
+							#choose the best biome for the new patch
+							random.shuffle(possible_biomes)
+							for p in range(len(possible_biomes)):
+								#if a biome is one you want or it is the only choice reminaing choose it
+								if possible_biomes[p] in desired_biomes or p == (len(possible_biomes) - 1): 
+									chosen_biome = possible_biomes[p]
+									if chosen_biome in desired_biomes:
+										desired_biomes.remove(chosen_biome)
+									break
+							test_cluster.nodes.append(node(test_cluster.x, test_cluster.y, chosen_biome))
+							#add the patch and lines to the map
+							clusters.append(test_cluster)
+							lines = lines + lines2[:]
+					#if the cluster is an ocean stack
+					else:
+						test_cluster.nodes.append(node(test_cluster.x, test_cluster.y, "Epipelagic"))
+						test_cluster.nodes.append(node(test_cluster.x, test_cluster.y + 50, "Mesopelagic"))
+						test_cluster.nodes.append(node(test_cluster.x, test_cluster.y + 100, "Bathypelagic"))
+						test_cluster.nodes.append(node(test_cluster.x, test_cluster.y + 150, "Abyssopelagic"))
+						clusters.append(test_cluster)
+						lines = lines + lines2[:]
+
+	if len(desired_biomes) > 0:
+		reset()
+			
 
 	#add connections between clusters
 	#for c in clusters:
@@ -345,6 +489,39 @@ def reset():
 	#			c.neighbours.append(d)
 				#lines.append([center(d), center(c)])
 	#			break
+
+
+def trap(c1,c2):
+	running = True
+	while running:
+		for event in pygame.event.get():
+		    if event.type == pygame.QUIT:
+		        running = False
+		    elif event.type == KEYDOWN:
+		        if event.key == K_ESCAPE:
+		            running = False
+		        if event.key == K_SPACE:
+		        	pygame.quit()
+		       
+
+		screen.fill(background_colour)
+
+		#for c in clusters:
+		#	c.draw_connections()
+
+		for l in lines:
+			draw_line(l)
+
+
+		for c in clusters:
+			c.draw()
+			for n in c.nodes:
+				n.draw()
+
+		c1.draw()
+		c2.draw()
+
+		pygame.display.flip()
 
 
 reset()
