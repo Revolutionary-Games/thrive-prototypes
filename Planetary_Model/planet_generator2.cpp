@@ -16,10 +16,12 @@ class Star{
     double StarMass;
     double LifeSpan;
 
-    void setSol(bool sol){  
-        if (sol == true){
-            StarMass = 1; //solar masses 
-        }
+    Star(){
+        generateProperties(0);
+    }
+
+    void setSol(){  
+        StarMass = 1; //solar masses 
         generateProperties(2);
     }
 
@@ -71,7 +73,8 @@ class Planet{
 int main(){
 
     Star star;
-    star.setSol(true);
+    star.print();
+    star.setSol();
     star.print();
     Planet planet;
     planet.print();
