@@ -66,14 +66,48 @@ public:
     Star* orbitingStar;
     double orbitalRadius;
     double planetRadius;
+    double planetMass;
+    double planetOrbitalPeriod;
+    double lithosphereMass;
+    double atmosphereMass;
+    double oceanMass;
+    double atmosphereWater;
+    double atmosphereCarbonDioxide;
+    double atmosphereOxygen;
+    double atmosphereNitrogen;
+    std::array<double, LENGTH_OF_ARRAYS> atmosphericFilter;
+    std::array<double, LENGTH_OF_ARRAYS> terrestrialSpectrum;
+    double planetTemperature;
 
     Planet(Star* star)
     {
         orbitingStar = star;
+        generatePropertiesOrbitalRadius(0);
+        generatePropertiesPlanetRadius(0);
+        generatePropertiesAtmosphere(0);
     }
+
+    void setEarth();
 
     void print();
 
     void update();
+
+private:
+    void generatePropertiesOrbitalRadius(int step);
+    void computeOptimalOrbitalRadius();
+    void setPlanetPeriod();
+
+    void generatePropertiesPlanetRadius(int step);
+    void setoSphereMasses();
+    void setPlanetMass();
+
+    void generatePropertiesAtmosphere(int step);
+    void setAtmosphereConstituentsRandom();
+    void setAtmosphereConstituentsEarth();
+    void massOfGasToClimateParameter(float &Oxygen, float &CarbonDioxide);
+    void setPlanetTemperature(); 
+
+
 
 };

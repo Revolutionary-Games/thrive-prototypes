@@ -31,7 +31,7 @@ constexpr double BASE_MIN_ORBITAL_DIAMETER = 5.5e10; // meters (radius of mercur
 constexpr double OXYGEN_PARAMETER = 0.3; // amount of sunlght ozone can block if atmosphere is 100 oxgen
 constexpr double CARBON_DIOXIODE_PARAMETER = 0.3; // same
 constexpr double WATER_VAPOUR_PARAMETER = 0.3; //same
-constexpr double NUMBER_OF_GAS_CHECKS = 10; //number of different values of CO2 and O2 to check, more is better but very intensive
+constexpr double NUMBER_OF_GAS_CHECKS = 9; //number of different values of CO2 and O2 to check, more is better but very intensive
 constexpr double MIN_PLANET_RADIUS = 5375699.0; // smallest radius allowed, see http://forum.revolutionarygamesstudio.com/t/planet-generation/182/10
 constexpr double MAX_PLANET_RADIUS = 9191080.0; // largest radius allowed
 constexpr double DENSITY_OF_EARTH = 5515.3; // kg m^-3 assume all planets are the same density as earth
@@ -51,6 +51,8 @@ constexpr double DIAMETER_WATER = 9.0e-11; // meters, size of a water molecule f
 constexpr double DIAMETER_NITROGEN = 7.5e-11; //  meters
 constexpr double DIAMETER_CARBON_DIOXIDE = 9e-11; // meters
 constexpr double DIAMETER_OXYGEN = 7.3e-11; // meters
+constexpr double EARTH_OXYGEN_MASS = 1.03038e+018; //kg
+constexpr double EARTH_CARBON_DIOXIDE_MASS = 2.06076e+017; //kg
 
 // ------------------------------------ //
 // Utility Functions
@@ -251,14 +253,160 @@ void Star::update()
 // Planet
 // ------------------------------------ //
 
+
+
+void Planet::setEarth()
+{
+    planetRadius = RADIUS_OF_THE_EARTH;
+    generatePropertiesPlanetRadius(1);
+    setAtmosphereConstituentsEarth();
+    generatePropertiesAtmosphere(1);
+     
+    
+}
+
+void Planet::generatePropertiesOrbitalRadius(int step)
+{
+    if (step <= 0)
+    {
+        computeOptimalOrbitalRadius();
+    }
+    if (step <= 1)
+    {
+        setPlanetPeriod();
+    }    
+}
+
+//put the planet in the optimal place in the system
+void Planet::computeOptimalOrbitalRadius(){
+    int maxHabitability = 0;
+    int entryLocation = 0;
+    for (int i = 0; i < NUMBER_OF_TESTS; i++){
+            if (orbitingStar->habitabilityScore[i] > maxHabitability){
+                maxHabitability = orbitingStar->habitabilityScore[i];
+                entryLocation = i;
+            }
+    }
+    orbitalRadius = orbitingStar->orbitalDistances[entryLocation];
+}
+
+//compute the planets orbital period using Kepler's law https://en.wikipedia.org/wiki/Orbital_period
+void Planet::setPlanetPeriod(){
+    planetOrbitalPeriod = 2*PI*pow(((pow(orbitalRadius,3))/orbitingStar->gravitationalParameter),0.5);
+}
+
+void Planet::generatePropertiesPlanetRadius(int step)
+{
+    if (step <= 0)
+    {
+        planetRadius = fRand(MIN_PLANET_RADIUS, MAX_PLANET_RADIUS);
+    }
+    if (step <= 1)
+    {
+        setPlanetMass();
+        setoSphereMasses();
+    }
+}
+
+void Planet::setPlanetMass(){
+    planetMass = DENSITY_OF_EARTH*4*PI*(pow(planetRadius,3))/3;
+}
+
+// set the masses of hte atmosphere, ocean and lithosphere
+void Planet::setoSphereMasses()
+{
+    atmosphereMass = planetMass*PERCENTAGE_ATMOSPHERE;
+    oceanMass = planetMass*PERCENTAGE_OCEAN;
+    lithosphereMass = planetMass*PERCENTAGE_LITHOSPHERE;
+
+}
+
+void Planet::generatePropertiesAtmosphere(int step)
+{
+    if (step <= 0)
+    {
+        setAtmosphereConstituentsRandom();
+    }
+    if (step <= 1)
+    {
+        setPlanetTemperature();
+    }
+}
+
+//choose what gasses to have in your atmosphere. 
+void Planet::setAtmosphereConstituentsRandom()
+{
+    double currentPercentage = fRand(0,0.9);
+    atmosphereOxygen = atmosphereMass*currentPercentage;
+    double newRange = 1 - currentPercentage;
+    currentPercentage = fRand(0,newRange);
+    atmosphereWater = atmosphereMass*currentPercentage;
+    newRange = newRange - currentPercentage;
+    currentPercentage = fRand(0,newRange);
+    atmosphereCarbonDioxide = atmosphereMass*currentPercentage;
+    newRange = newRange - currentPercentage;
+    atmosphereNitrogen = atmosphereMass*newRange;
+}
+void Planet::setAtmosphereConstituentsEarth() 
+{
+    atmosphereOxygen = atmosphereMass*0.2;
+    atmosphereWater = atmosphereMass*0.04;
+    atmosphereCarbonDioxide = atmosphereMass*0.04;
+    atmosphereNitrogen = atmosphereMass*0.72;
+}
+
+//compute the atmospheric parameters from the mass of gas
+void Planet::massOfGasToClimateParameter(float &oxygen, float &carbonDioxide){
+    if (atmosphereOxygen < (0.5*EARTH_OXYGEN_MASS)){
+        oxygen = 0;
+    }
+    else if (atmosphereOxygen > (1.5*EARTH_OXYGEN_MASS)){
+        oxygen = 1;
+    }
+    else{
+        oxygen = (atmosphereOxygen/EARTH_OXYGEN_MASS) - 0.5;
+    }
+    if (atmosphereCarbonDioxide < (0.985*EARTH_CARBON_DIOXIDE_MASS)){
+        carbonDioxide = 0;
+    }
+    else if (atmosphereCarbonDioxide > (1.985*EARTH_CARBON_DIOXIDE_MASS)){
+        carbonDioxide = 1;
+    }
+    else{
+        carbonDioxide = (atmosphereCarbonDioxide/EARTH_CARBON_DIOXIDE_MASS) - 0.985;
+    }
+}
+
+//compute the final temperature of the planet
+void Planet::setPlanetTemperature(){
+    double incomingSunlight = orbitingStar->luminosity/(4*PI*(pow(orbitalRadius,2)));
+    float oxygen;
+    float carbonDioxide;
+    massOfGasToClimateParameter(oxygen, carbonDioxide);
+    planetTemperature = computeTemperature(incomingSunlight, carbonDioxide, oxygen);
+
+}
+
 void Planet::print()
 {
-        
-    //these would all be replaced with log info's
-    std::cout << "Info about the current planet." << std::endl;
-    std::cout << "Orbiting star with mass: " << orbitingStar->starMass << std::endl;   
-    std::cout << "OrbitalRadius: " << orbitalRadius << std::endl;
-    std::cout << "PlanetRadius: " << planetRadius << std::endl;
+    if (PRINT)
+    {    
+        //these would all be replaced with log info's
+        std::cout << "Info about the current planet." << std::endl;
+        std::cout << "Orbiting star with mass: " << orbitingStar->starMass << std::endl;   
+        std::cout << "OrbitalRadius: " << orbitalRadius << std::endl;
+        std::cout << "PlanetRadius: " << planetRadius << std::endl;
+        std::cout << "Planet Mass = " << planetMass << " kg.\n";
+        std::cout << "Planet Orbital Period = " << planetOrbitalPeriod << " seconds = "
+                << planetOrbitalPeriod/3.154e+7 << " earth years. \n";
+        std::cout << "Mass of atmosphere : " << atmosphereMass << ", Mass of Ocean : " << oceanMass
+                << ", Mass of Lithosphere : " << lithosphereMass << " kg. \n";
+        std::cout << "Water : " << atmosphereWater << ", Oxygen : " << atmosphereOxygen
+                << ", Nitrogen : " << atmosphereNitrogen << ", CO2: " << atmosphereCarbonDioxide
+                << " kg in Atmosphere. \n";
+        std::cout << "Planet Temperature = " << planetTemperature << " Kelvin. \n";
+        std::cout << "\n";
+    }
 }
 
 void Planet::update()
@@ -279,6 +427,8 @@ int main(){
     star.update();
     star.print();
     planet.update();
+    planet.print();
+    planet.setEarth();
     planet.print();
     return 0;
 }
