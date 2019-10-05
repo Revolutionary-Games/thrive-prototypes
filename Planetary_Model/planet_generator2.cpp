@@ -258,6 +258,7 @@ void Star::update()
 void Planet::setEarth()
 {
     planetRadius = RADIUS_OF_THE_EARTH;
+    generatePropertiesOrbitalRadius(0);
     generatePropertiesPlanetRadius(1);
     setAtmosphereConstituentsEarth();
     generatePropertiesAtmosphere(1);
@@ -330,6 +331,8 @@ void Planet::generatePropertiesAtmosphere(int step)
     if (step <= 1)
     {
         setPlanetTemperature();
+        computeLightFilter();
+        multiplyArrays(orbitingStar->stellarSpectrum, atmosphericFilter, terrestrialSpectrum);
     }
 }
 
@@ -387,6 +390,133 @@ void Planet::setPlanetTemperature(){
 
 }
 
+//simple formula for surface area of a sphere
+double Planet::computeSurfaceAreaFromRadius(){
+	return 4*PI*(pow(planetRadius,2));
+}
+
+//how much gas is there in a column above 1sq meter of land?
+double Planet::massOfGasIn1sqm(double massOfGas){
+	double surfaceArea = computeSurfaceAreaFromRadius();
+	double massIn1sqm = massOfGas/surfaceArea;
+	return massIn1sqm;
+}
+
+//how many atoms are there in a column above 1sq m of land?
+double Planet::atomsOfGasIn1sqm(double massOfGas, double molecularMass){
+	double massIn1sqm = massOfGasIn1sqm(massOfGas);
+	double numberOfMoles = massIn1sqm/molecularMass;
+	double numberOfAtoms = numberOfMoles*AVOGADRO;
+	return numberOfAtoms;
+}
+
+//what percentage of the light should make it through?
+double Planet::attenuationParameter(char gas){
+	double fudgeFactor;
+	double molecularArea;
+	double molecularMass;
+	double massOfGas;
+	if (gas == 'w'){
+        fudgeFactor = FUDGE_FACTOR_WATER;
+        molecularArea = pow(DIAMETER_WATER, 2);
+        molecularMass = MOLECULAR_MASS_WATER;
+        massOfGas = atmosphereWater;
+	}
+	if (gas == 'o'){
+        fudgeFactor = FUDGE_FACTOR_OXYGEN;
+        molecularArea = pow(DIAMETER_OXYGEN, 2);
+        molecularMass = MOLECULAR_MASS_OXYGEN;
+        massOfGas = atmosphereOxygen;
+	}
+	if (gas == 'n'){
+        fudgeFactor = FUDGE_FACTOR_NITROGEN;
+        molecularArea = pow(DIAMETER_NITROGEN, 2);
+        molecularMass = MOLECULAR_MASS_NITROGEN;
+        massOfGas = atmosphereNitrogen;
+	}
+	if (gas == 'c'){
+        fudgeFactor = FUDGE_FACTOR_CARBON_DIOXIDE;
+        molecularArea = pow(DIAMETER_CARBON_DIOXIDE, 2);
+        molecularMass = MOLECULAR_MASS_CARBON_DIOXIDE;
+        massOfGas = atmosphereCarbonDioxide;
+	}
+    double numberOfAtoms = atomsOfGasIn1sqm(massOfGas, molecularMass);
+	double exponent = -fudgeFactor*numberOfAtoms*molecularArea;
+	return pow(E, exponent);
+	}
+
+//compute how the atmospheric gasses filter the light
+void Planet::computeLightFilter(){
+    //what percentage of light to block for different compounds?
+	//this value is the base and on earth, for all of them, it should be 0.5
+	//this base value is then, as below, taken to a power based on wavelength
+	double water = attenuationParameter('w');
+    double largestFilter = water;
+	double nitrogen = attenuationParameter('n');
+	if (nitrogen > largestFilter){
+        largestFilter = nitrogen;
+	}
+	double oxygen = attenuationParameter('o');
+	if (oxygen > largestFilter){
+        largestFilter = oxygen;
+	}
+	double carbonDioxide = attenuationParameter('c');
+	if (carbonDioxide > largestFilter){
+        largestFilter = carbonDioxide;
+	}
+	//define the values of the filter
+	atmosphericFilter[0] = (pow(nitrogen,0.3))*(pow(oxygen,2.2))*water;
+	atmosphericFilter[1] =  (pow(nitrogen,0.3))*(pow(oxygen,2.2))*water;
+	atmosphericFilter[2] = (pow(oxygen,2.2))*(pow(water,2.2));
+	atmosphericFilter[3] = (pow(oxygen,2.2))*(pow(water,2.2));
+	atmosphericFilter[4] = (pow(oxygen,2.2));
+	atmosphericFilter[5] = (pow(oxygen,2.2));
+	atmosphericFilter[6] = (pow(oxygen,2.2));
+	atmosphericFilter[7] = pow(oxygen,1.7);
+	atmosphericFilter[8] = pow(oxygen,1.7);
+	atmosphericFilter[9] = pow(oxygen,1.7);
+	atmosphericFilter[10] = pow(oxygen,1.7);
+	atmosphericFilter[11] = (pow(oxygen,1.7))*(pow(water,2.2));
+	atmosphericFilter[12] = (pow(oxygen,1.7))*(pow(water,2.2));
+	atmosphericFilter[13] = (pow(water,2.2))*(pow(oxygen,1.7));
+	atmosphericFilter[14] = (pow(oxygen,1.7));
+	atmosphericFilter[15] = (pow(water,2.2))*1*oxygen;
+	atmosphericFilter[16] = (pow(oxygen,1.7));
+	atmosphericFilter[17] = largestFilter;
+	atmosphericFilter[18] = (pow(water,2.2));
+	atmosphericFilter[19] = largestFilter;
+	atmosphericFilter[20] = (pow(oxygen,1.7));
+	atmosphericFilter[21] = (pow(water,2.2));
+	atmosphericFilter[22] = largestFilter;
+	atmosphericFilter[23] = largestFilter;
+	atmosphericFilter[24] = (pow(oxygen,1.7));
+	atmosphericFilter[25] = largestFilter;
+	atmosphericFilter[26] = 1*water;
+	atmosphericFilter[27] = pow(carbonDioxide,0.75);
+	atmosphericFilter[28] = largestFilter;
+	atmosphericFilter[29] = pow(carbonDioxide,2.3);
+	atmosphericFilter[30] = largestFilter;
+	atmosphericFilter[31] = (pow(oxygen,1.7));
+	atmosphericFilter[32] = largestFilter;
+	atmosphericFilter[33] = largestFilter;
+	atmosphericFilter[34] = largestFilter;
+	atmosphericFilter[35] = largestFilter;
+	atmosphericFilter[36] = 1*water;
+	atmosphericFilter[37] = largestFilter;
+	atmosphericFilter[38] = largestFilter;
+	atmosphericFilter[39] = 1*carbonDioxide;
+	atmosphericFilter[40] = largestFilter;
+	atmosphericFilter[41] = largestFilter;
+	atmosphericFilter[42] = largestFilter;
+	atmosphericFilter[43] = largestFilter;
+	atmosphericFilter[44] = largestFilter;
+	atmosphericFilter[45] = largestFilter;
+	atmosphericFilter[46] = largestFilter;
+	atmosphericFilter[47] = (pow(water,0.1));
+	atmosphericFilter[48] = (pow(water,0.1));
+	atmosphericFilter[49] = largestFilter;
+}
+
 void Planet::print()
 {
     if (PRINT)
@@ -406,6 +536,15 @@ void Planet::print()
                 << " kg in Atmosphere. \n";
         std::cout << "Planet Temperature = " << planetTemperature << " Kelvin. \n";
         std::cout << "\n";
+        
+        if (PRINT_VERBOSE)
+        {
+            std::cout << "Atmospheric Filter. \n";  
+            printSpectrum(atmosphericFilter);
+            std::cout << "Terrestrial Spectrum. \n";  
+            printSpectrum(terrestrialSpectrum);
+
+        }    
     }
 }
 

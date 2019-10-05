@@ -106,8 +106,11 @@ private:
     void setAtmosphereConstituentsRandom();
     void setAtmosphereConstituentsEarth();
     void massOfGasToClimateParameter(float &Oxygen, float &CarbonDioxide);
-    void setPlanetTemperature(); 
-
-
+    void setPlanetTemperature();
+    double computeSurfaceAreaFromRadius(); 
+    double massOfGasIn1sqm(double MassOfGas);
+    double atomsOfGasIn1sqm(double massOfGas, double molecularMass);
+    double attenuationParameter(char gas);
+    void computeLightFilter();
 
 };
