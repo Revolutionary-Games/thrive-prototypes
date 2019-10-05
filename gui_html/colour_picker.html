@@ -1,0 +1,118 @@
+<!-- colour picker prototype --> 
+<head>
+	<style>
+		#rect {
+		  position: absolute;
+		  top: 100px;
+		  left: 100px;
+		  border-radius: 50%;
+		}
+
+		#area {
+		  position: fixed;
+		  right: 0;
+		  top: 0;
+		  height:200px;
+		  width:200px;
+		}
+
+	</style>
+</head>
+
+<body>
+  <div id="area"></div>
+  <canvas id="rect" width="400" height="400"></canvas>
+</body>
+
+<script>
+
+document.getElementById('rect').addEventListener('click', printPosition)
+const cvs = document.getElementById("rect");
+const ctx = cvs.getContext("2d");
+
+var size_x = 400;
+var size_y = 400;
+ctx.canvas.width  = size_x;
+ctx.canvas.height = size_y;
+
+function HSVtoRGB(h, s, v) {
+    var r, g, b, i, f, p, q, t;
+    if (arguments.length === 1) {
+        s = h.s, v = h.v, h = h.h;
+    }
+    i = Math.floor(h * 6);
+    f = h * 6 - i;
+    p = v * (1 - s);
+    q = v * (1 - f * s);
+    t = v * (1 - (1 - f) * s);
+    switch (i % 6) {
+        case 0: r = v, g = t, b = p; break;
+        case 1: r = q, g = v, b = p; break;
+        case 2: r = p, g = v, b = t; break;
+        case 3: r = p, g = q, b = v; break;
+        case 4: r = t, g = p, b = v; break;
+        case 5: r = v, g = p, b = q; break;
+    }
+    return {
+        r: Math.round(r * 255),
+        g: Math.round(g * 255),
+        b: Math.round(b * 255)
+    };
+}
+
+function xyToHSV(x,y){
+	var cx = size_x/2;
+	var cy = size_y/2;
+	var rx = x - cx;
+	var ry = y - cy;
+	var dist = Math.sqrt(rx**2 + ry**2);
+	var scaledDist = dist/(0.4*size_x);
+	var angle = Math.atan2(ry,rx);
+	var scaledAngle = (angle + Math.PI)/(2*Math.PI);
+	return {
+		h: scaledAngle,
+		s: scaledDist,
+		v: 1
+	};
+}
+
+drawCanvas();
+function drawCanvas()
+{
+	for (var x = 0; x < size_x; x++){
+		for (var y = 0; y < size_y; y++){
+			var colour = getColourFromPosition(x,y);
+			ctx.fillStyle = colour;
+			ctx.fillRect( x, y, 1, 1 );
+		}
+	}
+}
+
+
+
+function getPosition(e) {
+  var rect = e.target.getBoundingClientRect();
+  var x = e.clientX - rect.left;
+  var y = e.clientY - rect.top;
+  return {
+    x,
+    y
+  }
+}
+
+function getColourFromPosition(x,y){
+	var hsv = xyToHSV(x,y);
+	var colour = HSVtoRGB(hsv.h,hsv.s,hsv.v);
+	return "rgb(" + colour.r + "," + colour.g +"," + colour.b + ")";
+}
+
+function printPosition(e) {
+  var position = getPosition(e);
+  var area = document.getElementById('area');
+  var colour = getColourFromPosition(position.x, position.y);
+  area.innerHTML = colour;
+  area.style.backgroundColor = colour;
+}
+
+
+</script>
