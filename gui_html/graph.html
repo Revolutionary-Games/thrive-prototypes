@@ -1,0 +1,67 @@
+<head>
+	<style>
+		#graph
+		{
+			margin-top:100px;
+			margin-left:100px;
+			background-color:rgb(240,240,255);
+		}
+	</style>
+</head>
+
+<body>
+	<svg id="graph" height="210" width="500">
+		<!-- all the lines will be added in here -->
+	</svg>
+</body>
+
+<script>
+
+var graph = document.getElementById('graph');
+
+//make some random data
+var data = []
+for (var i = 0; i < 100; i++){
+	data.push(Math.floor(Math.random() * 100));
+}
+
+//draw a line in the graph box
+function drawLine(graph, x1,y1,x2,y2, stroke, strokeWidth)
+{
+	graph.innerHTML += "<line x1=\"" + x1 + "\" y1=\"" + y1 + "\" x2=\"" + x2 + "\" y2=\"" + y2 + "\" style=\"stroke:" + stroke + ";stroke-width:" + strokeWidth + "\" />";
+}
+
+//draw the graph
+function drawGraph(graph, data)
+{
+	//get the size of the container
+	var positionInfo = graph.getBoundingClientRect();
+	var height = positionInfo.height;
+	var width = positionInfo.width;
+	//work out the bounds of the data
+	var xRange = data.length;
+	var yMax = Math.max(...data);
+	var yMin = Math.min(...data);
+	var yRange = yMax - yMin;
+	//draw the axes
+	var offset = 10; // padding for the x and y axis
+	drawLine(graph,offset,offset,offset,height - offset,"rgb(0,0,100)", "3");
+	drawLine(graph,offset,height - offset,width - offset,height - offset,"rgb(0,0,100)", "3");
+	//draw the points of the graph
+	var oldX = offset;
+	var oldY = height - offset;
+	var xStep = (width - 2*offset)/xRange;
+	var yStep = (height - 2*offset)/yRange;
+	for (var i in data)
+	{
+		newX = oldX + xStep;
+		newY = (height - offset) - yStep*data[i];
+		drawLine(graph,oldX,oldY,newX,newY,"rgb(0,10,50)", "1");
+		oldX = newX;
+		oldY = newY;
+	}
+}
+
+drawGraph(graph, data);
+
+</script>
