@@ -9,8 +9,9 @@ public class species
 	public float speedScore;
 	public float energy;
 	
-	public species(Random random, List<string> resources, Dictionary<string, string> resourceGathered, Dictionary<string, float> gatheringEffectiveness)
+	public species(Random random, Dictionary<string, string> resourceGathered)
 	{
+		Console.WriteLine("Making new species with organelles:");
 		//how many of each organelle do you have?
 		numberOfOrganelles = random.Next(2,7);
 		//add organelles at random
@@ -20,6 +21,7 @@ public class species
 			organelles.Add(keyList[index]);	
 			Console.WriteLine(keyList[index]);
 		}
+		Console.WriteLine(" ");
 
 		
 		//how much energy have you gathered this turn?
@@ -31,12 +33,53 @@ public class species
 	}
 }
 
+public class patch
+{
+	public List<species> listOfSpecies = new List<species>();
+	public Dictionary<string, float> myAvailablePrimaryResources = new Dictionary<string, float>();
+	
+	public patch(Dictionary<string, float> availablePrimaryResources, Dictionary<string, string> resourceGathered, Dictionary<string, float> gatheringEffectiveness)
+	{
+		Random random = new Random();
+		for (var i = 0; i < 5; i++)
+		{
+			listOfSpecies.Add(new species(random, resourceGathered));
+			myAvailablePrimaryResources = availablePrimaryResources;
+		}
+	}
+	
+	public void computePopulations(Dictionary<string, string> resourceGathered, Dictionary<string, float> gatheringEffectiveness)
+	{
+		
+		//zero out the energy for all species
+		foreach (species spec in listOfSpecies)
+		{
+			//start with 0 energy
+			spec.energy = 0;
+			
+		}
+		//for each resource that can be gathered
+		
+		//work out the total number of organelles in the patch, weighted by their effectiveness
+		
+		//for each species give them energy proportional to their gathering effectiveness
+		
+		//this is where the predation relations need to be added
+		
+		//work out the population for each species based on how much energy they have collected
+		foreach (species spec in listOfSpecies)
+		{
+			spec.population = (int)(spec.energy/(Math.Pow(spec.numberOfOrganelles,1.3)));	
+		}
+		
+	}
+	
+}
+
 public class Program
 {
 	public static void Main()
 	{
-		//what resources are available in the world?
-		List<string> primaryResources = new List<string>(){"sunglight", "hydrogen", "iron"}; 
 		
 		//for each organelle which resource do they gather?
 		Dictionary<string, string> resourceGathered = new Dictionary<string, string>(){
@@ -56,10 +99,19 @@ public class Program
 			{"chemoplast", 1.0f}
 		};
 		
+		//for this patch what resources are available?
+		Dictionary<string, float> availablePrimaryResources = new Dictionary<string, float>()
+		{
+			{"sunlight", 10000.0f},
+			{"iron", 10000.0f},
+			{"hydrogen", 10000.0f},		
+		};
+		
 		Console.WriteLine("Population Calculator using lists");
 		Console.WriteLine(" ");
 		
-		Random random = new Random();
-		new species(random, primaryResources, resourceGathered, gatheringEffectiveness);
+		patch mainPatch = new patch(availablePrimaryResources, resourceGathered, gatheringEffectiveness);
+		mainPatch.computePopulations(resourceGathered, gatheringEffectiveness);
+		
 	}
 }
