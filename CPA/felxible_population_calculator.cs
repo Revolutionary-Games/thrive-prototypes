@@ -8,6 +8,7 @@ public class species
 	public int population;
 	public float speedScore;
 	public float energy;
+	public float currentResourceScore;
 	
 	public species(Random random, Dictionary<string, string> resourceGathered)
 	{
@@ -59,10 +60,38 @@ public class patch
 			
 		}
 		//for each resource that can be gathered
+		foreach (KeyValuePair<string, float> resource in myAvailablePrimaryResources)
+		{
 		
-		//work out the total number of organelles in the patch, weighted by their effectiveness
+			//work out the total number of organelles in the patch, weighted by their effectiveness
+			float totalResourceGathering = 0;
+			foreach (species spec in listOfSpecies)
+			{
+				spec.currentResourceScore = 0;
+				//in each species work out which organelles they have which can help and weight them by their effectiveness
+				foreach (string organelle in spec.organelles)
+				{
+					if (resourceGathered[organelle] == resource.Key)
+					{
+						Console.WriteLine("adding weight, " + resource.Key + " " + gatheringEffectiveness[organelle].ToString());
+						spec.currentResourceScore += gatheringEffectiveness[organelle];
+						totalResourceGathering += gatheringEffectiveness[organelle];
+					}
+				}
+			}
+			
+			Console.WriteLine("Resource " + resource + " total score = " + totalResourceGathering);
 		
-		//for each species give them energy proportional to their gathering effectiveness
+			//for each species give them energy proportional to their gathering effectiveness
+			if (totalResourceGathering > 0)
+			{
+				foreach (species spec in listOfSpecies)
+				{
+					spec.energy += resource.Value*spec.currentResourceScore;	
+				}
+			}
+			
+		}
 		
 		//this is where the predation relations need to be added
 		
@@ -94,7 +123,7 @@ public class Program
 		//how effective is that organelle at gathering resources
 		Dictionary<string, float> gatheringEffectiveness = new Dictionary<string, float>(){
 			{"thylakoid", 1.0f},
-			{"chloroplast", 2.0f},
+			{"chloroplast", 1.5f},
 			{"rusticyanin", 1.0f},
 			{"chemoplast", 1.0f}
 		};
@@ -112,6 +141,21 @@ public class Program
 		
 		patch mainPatch = new patch(availablePrimaryResources, resourceGathered, gatheringEffectiveness);
 		mainPatch.computePopulations(resourceGathered, gatheringEffectiveness);
+		
+		Console.WriteLine(" ");
+		Console.WriteLine("Population, Energy Gathered, Organelles");
+		foreach (species spec in mainPatch.listOfSpecies)
+		{
+			string organellesString = "     ";
+			foreach (string organelle in spec.organelles)
+			{
+				organellesString += organelle;
+				organellesString += ", ";
+			}
+			Console.WriteLine(spec.population.ToString().PadLeft(10) 
+							  + ", " + spec.energy.ToString().PadLeft(10)
+							  + ", " + organellesString.PadLeft(10));
+		}
 		
 	}
 }
