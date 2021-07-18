@@ -4,7 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace MulticellAutoEvo
 {
     [TestClass]
-    public class UnitTest1
+    public class BasicTests
     {
         [TestMethod]
         public void SanityTest()
