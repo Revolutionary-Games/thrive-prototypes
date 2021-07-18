@@ -10,7 +10,10 @@ namespace MulticellAutoEvo
     class Critter
     {
 
-        CritterSpecies species;
+        public CritterSpecies species;
+
+        public Point location;
+        public Point movementTarget;
 
         public Critter(CritterSpecies species)
         {

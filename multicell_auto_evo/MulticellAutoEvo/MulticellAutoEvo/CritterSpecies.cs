@@ -10,9 +10,9 @@ namespace MulticellAutoEvo
     {
 
         // Variable names intentionally stupid because this isn't the code being demonstrated
-        int Buffness;
-        int Toughness;
-        int Speed;
+        public int Buffness;
+        public int Toughness;
+        public int Speed;
 
         public CritterSpecies()
         {

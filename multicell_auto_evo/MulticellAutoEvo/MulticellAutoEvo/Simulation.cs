@@ -16,8 +16,16 @@ namespace MulticellAutoEvo
             this.critters = critters;
         }
 
-        public Critter[] RunSimulation()
+        public Critter[] RunSimulation(int turns)
         {
+
+            for(var turn = 0; turn < turns; turn++)
+            {
+                foreach(Critter critter in critters)
+                {
+                    critter.location = critter.location.TowardsPoint(critter.movementTarget, critter.species.Speed);
+                }
+            }
             return critters;
         }
     }
