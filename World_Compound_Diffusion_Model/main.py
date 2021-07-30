@@ -61,7 +61,7 @@ def run_simulation(data):
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('setup', help = "The name of the setup json file."+
+    parser.add_argument('setup', help = "The path to the setup json file."+
         "It has to include the extension and should be placed under the setups folder.")
     args=parser.parse_args()
 
