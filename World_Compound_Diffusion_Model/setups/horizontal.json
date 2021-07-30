@@ -1,0 +1,66 @@
+{
+  "compound": "Oxygen",
+  "patches_data": [
+    {
+      "depth": 200,
+      "molecule_speed": 1,
+      "initial_compound_amount": 0,
+      "initial_compound_production": 1,
+      "name": "'Producer'"
+    },
+    {
+      "depth": 200,
+      "molecule_speed": 1,
+      "initial_compound_amount": 0,
+      "initial_compound_production": 0,
+      "name": "'Neighbour'"
+    },
+    {
+      "depth": 200,
+      "molecule_speed": 2,
+      "initial_compound_amount": 0,
+      "initial_compound_production": 0,
+      "name": "'Fast Transit'"
+    },
+    {
+      "depth": 200,
+      "molecule_speed": 1,
+      "initial_compound_amount": 0,
+      "initial_compound_production": 0,
+      "name": "'Enclosed'"
+    }
+  ],
+
+  "patch_links": [
+    {
+      "patch1": 0,
+      "patch2": 1,
+      "value": 1
+    },
+    {
+      "patch1": 1,
+      "patch2": 2,
+      "value": 1
+    },
+    {
+      "patch1": 2,
+      "patch2": 3,
+      "value": 0.5
+    }
+  ],
+
+  "future_productions":[
+    [1, 0, 0, 0],
+    [1, 0, 0, 0],
+    [1, 0, 0, 0],
+    [1, 0, 0, 0],
+    [1, 0, 0, 0],
+    [1, 0, 0, 0],
+    [1,-1,-1,-1],
+    [1,-1,-1,-1],
+    [1,-1,-1,-1]
+  ],
+  "step_duration": 10,
+  "solver": "np-least_squares"
+
+}
