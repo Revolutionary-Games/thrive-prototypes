@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import json
+import argparse
 
 from patch import Patch
 from patch_map import PatchMap
@@ -59,8 +60,14 @@ def run_simulation(data):
 
 
 if __name__=="__main__":
-    SETUP_FILE_PATH = "setups/horizontal.json"
-    with open(SETUP_FILE_PATH) as f:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('setup', help = "The name of the setup json file."+
+        "It has to include the extension and should be placed under the setups folder.")
+    args=parser.parse_args()
+
+
+    setup_file_path = args.setup
+    with open(setup_file_path) as f:
         data = json.load(f)
 
     patches, patch_map, world_diffusion_system, repartition_snapshots = run_simulation(data)
