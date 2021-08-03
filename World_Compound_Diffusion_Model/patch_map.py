@@ -16,12 +16,12 @@ class PatchMap(object):
 
     def fill_link_matrix(self, patch_links):
         print(patch_links)
-        for (patch_index1, patch_index2, link_value) in patch_links:
-            self.links_matrix[patch_index1, patch_index2] = link_value
-            self.links_matrix[patch_index2, patch_index1] = link_value
+        for (patch_index1, patch_index2, link_value, bias_from_1_to_2) in patch_links:
+            self.links_matrix[patch_index1, patch_index2] = link_value * (1-bias_from_1_to_2)
+            self.links_matrix[patch_index2, patch_index1] = link_value * (1+bias_from_1_to_2)
 
         for i in range(self.num_patches):
-            self.links_matrix[i,i] = -np.sum(self.links_matrix[i,:])
+            self.links_matrix[i,i] = -np.sum(self.links_matrix[:,i])
 
     def update_production(self, new_production_vector):
         for i, patch in enumerate(self.patches):

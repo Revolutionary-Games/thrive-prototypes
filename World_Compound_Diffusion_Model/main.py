@@ -28,7 +28,7 @@ def define_patches_and_patch_map(data):
     patches = define_patches(data)
 
     patch_links = [
-        (link_data["patch1"],link_data["patch2"], link_data["value"])
+        (link_data["patch1"],link_data["patch2"], link_data["value"], link_data["1-2_bias"])
         for link_data in data["patch_links"]
     ]
 

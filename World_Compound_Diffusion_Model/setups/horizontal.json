@@ -35,17 +35,20 @@
     {
       "patch1": 0,
       "patch2": 1,
-      "value": 1
+      "value": 1,
+      "1-2_bias": 0
     },
     {
       "patch1": 1,
       "patch2": 2,
-      "value": 1
+      "value": 1,
+      "1-2_bias": 0
     },
     {
       "patch1": 2,
       "patch2": 3,
-      "value": 0.5
+      "value": 0.5,
+      "1-2_bias": 0
     }
   ],
 

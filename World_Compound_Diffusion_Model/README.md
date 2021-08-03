@@ -41,6 +41,7 @@ All units are arbitrary.
   - `"patch1"`: the index of the first patch. Indices range from 0 to the number of patches minus 1.
   - `"patch2"`: the index of the second patch.
   - `"value"`: the value of the link, defining how well compounds flow from one to another. Should range from 0 to 1.
+  - `"1-2 bias"`: the value of the bias in favor of movement from patch 1 to patch 2. Negative values indicate an actual bias from 2 to 1. Should range from -1 (no 1 -> 2) to 1(no 2-> 1). 0 means a balanced exchange.
 - `"future_productions"`: list of the productions per patch for the upcoming time steps.
 - `"step_duration"`: duration of the time step between two changes (elapsed time from editor). Note that the model assumes long-term dynamics, so weird behaviors can occur if too low!
 - `"solver"`: the kind of solver to use to find the repartition. "np-least_squares" is the only implemented currently.

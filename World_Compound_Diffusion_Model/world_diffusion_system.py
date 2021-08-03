@@ -1,4 +1,7 @@
 import numpy as np
+from scipy import linalg
+
+EPSILON = 1e-6
 
 class WorldDiffusionSystem(object):
     def __init__(self, patch_map, linear_solver):
@@ -19,7 +22,12 @@ class WorldDiffusionSystem(object):
         P = production_vector
 
         X_0 = self.solver.solve(np.matmul(M,M), -np.matmul(M,P))
-        Y_0 = np.matmul(C_inversed, np.ones((P.shape[0],)))
+
+        # Find *non-zero* solution to MY = 0
+        M_eigenvalues, M_eigenvectors = np.linalg.eig(M)
+        M_eigenpairs = [(value, M_eigenvectors[:,i]) for i, value in enumerate(M_eigenvalues)]
+        Y_0 = [vector for (value, vector) in M_eigenpairs if abs(value) < EPSILON][0]
+
 
         lambda_value = (compound_total_amount - np.sum(X_0))/np.sum(Y_0)
         new_repartition = X_0 + lambda_value * Y_0
